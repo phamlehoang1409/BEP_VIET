@@ -30,6 +30,50 @@ import OrderManagement from './pages/admin/OrderManagement';
 import AdminChat from './pages/admin/AdminChat';
 import AdminLogin from './pages/admin/AdminLogin';
 
+// Production Error Boundary to prevent any blank white screen
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App Render Error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[#FAF8F5] text-slate-800">
+          <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center space-y-4">
+            <span className="text-5xl">🍲</span>
+            <h2 className="text-xl font-black text-slate-900">Bếp Việt Gourmet</h2>
+            <p className="text-sm text-slate-500">
+              Hệ thống vừa cập nhật phiên bản mới. Vui lòng nhấn nút bên dưới để tải lại dữ liệu mới nhất.
+            </p>
+            <button
+              onClick={() => {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(regs => {
+                    for (const r of regs) r.unregister();
+                  });
+                }
+                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+                window.location.reload();
+              }}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-extrabold text-sm shadow-lg shadow-orange-500/30 active:scale-95 transition"
+            >
+              Tải Lại Trang Ngay
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Customer Layout Shell
 function CustomerLayout() {
   return (
@@ -67,37 +111,39 @@ function CustomerLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <ToastProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Customer Storefront Routes */}
-              <Route element={<CustomerLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/menu" element={<Menu />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/order-success/:id" element={<OrderSuccess />} />
-                <Route path="/orders" element={<MyOrders />} />
-              </Route>
+    <ErrorBoundary>
+      <AuthProvider>
+        <CartProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Customer Storefront Routes */}
+                <Route element={<CustomerLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/menu" element={<Menu />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/order-success/:id" element={<OrderSuccess />} />
+                  <Route path="/orders" element={<MyOrders />} />
+                </Route>
 
-              {/* Admin Login Route */}
-              <Route path="/admin/login" element={<AdminLogin />} />
+                {/* Admin Login Route */}
+                <Route path="/admin/login" element={<AdminLogin />} />
 
-              {/* Separated Merchant Admin Routes (Protected by AdminLayout) */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="foods" element={<FoodManagement />} />
-                <Route path="orders" element={<OrderManagement />} />
-                <Route path="chat" element={<AdminChat />} />
-              </Route>
+                {/* Separated Merchant Admin Routes (Protected by AdminLayout) */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="foods" element={<FoodManagement />} />
+                  <Route path="orders" element={<OrderManagement />} />
+                  <Route path="chat" element={<AdminChat />} />
+                </Route>
 
-              {/* Fallback */}
-              <Route path="*" element={<Home />} />
-            </Routes>
-          </BrowserRouter>
-        </ToastProvider>
-      </CartProvider>
-    </AuthProvider>
+                {/* Fallback */}
+                <Route path="*" element={<Home />} />
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </CartProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
