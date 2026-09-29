@@ -1,0 +1,21 @@
+{
+  "short_name": "Bếp Việt",
+  "name": "Bếp Việt Gourmet - Đặt Món Ăn Nóng Hổi",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FAF8F5",
+  "theme_color": "#FF5722",
+  "display": "standalone",
+  "orientation": "portrait"
+}

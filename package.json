@@ -1,0 +1,14 @@
+{
+  "name": "vietfood-delivery-fullstack",
+  "version": "1.0.0",
+  "description": "Fullstack Food Ordering App with SQL, Real-time Chat, Admin Portal & PWA",
+  "scripts": {
+    "install:all": "cmd /c \"cd server && npm install\" && cmd /c \"cd client && npm install\"",
+    "start:server": "cd server && node index.js",
+    "start:client": "cd client && npx vite --host --port 5173",
+    "dev": "npx concurrently -k -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run start:server\" \"npm run start:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
