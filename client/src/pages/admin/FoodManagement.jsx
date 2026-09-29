@@ -61,6 +61,7 @@ export default function FoodManagement() {
 
   // Delete Confirm Modal
   const [deletingFood, setDeletingFood] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchFoods = async () => {
     try {
@@ -147,6 +148,7 @@ export default function FoodManagement() {
   // Save dish (Create or Update)
   const handleSaveFood = async (e) => {
     e.preventDefault();
+    if (submitting) return;
 
     if (!name.trim()) {
       showToast('Vui lòng nhập tên món ăn', 'error');
@@ -174,6 +176,7 @@ export default function FoodManagement() {
       is_available: isAvailable ? 1 : 0
     };
 
+    setSubmitting(true);
     try {
       if (editingFood) {
         await updateFood(editingFood.id, payload);
@@ -186,6 +189,8 @@ export default function FoodManagement() {
       fetchFoods();
     } catch (err) {
       showToast(err.message || 'Có lỗi xảy ra', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -692,9 +697,13 @@ export default function FoodManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-extrabold shadow-lg shadow-orange-500/30 transition"
+                  disabled={submitting}
+                  className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-extrabold shadow-lg shadow-orange-500/30 transition flex items-center gap-2"
                 >
-                  {editingFood ? 'Lưu Thay Đổi' : 'Tạo Món Ăn'}
+                  {submitting && (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>{editingFood ? 'Lưu Thay Đổi' : 'Tạo Món Ăn'}</span>
                 </button>
               </div>
             </form>

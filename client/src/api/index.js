@@ -1,17 +1,39 @@
 import { io } from 'socket.io-client';
 
-const isDev = typeof window !== 'undefined' && window.location.port === '5173';
-const BACKEND_URL = isDev
-  ? `${window.location.protocol}//${window.location.hostname}:5000`
-  : (typeof window !== 'undefined' ? window.location.origin : '');
+const CLOUD_BACKEND_URL = 'https://bepviet-93qw.vercel.app';
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.port === '5173');
 
-const API_BASE = `${BACKEND_URL}/api`;
+let currentBackendUrl = isLocalhost
+  ? `${window.location.protocol}//${window.location.hostname}:5000`
+  : (typeof window !== 'undefined' && window.location.origin ? window.location.origin : CLOUD_BACKEND_URL);
+
+let localServerFailed = false;
+
+function switchToCloud() {
+  if (currentBackendUrl !== CLOUD_BACKEND_URL) {
+    console.warn(
+      `[Bếp Việt API] ⚠️ Máy chủ local (${currentBackendUrl}) không chạy hoặc không phản hồi. Tự động chuyển kết nối sang Cloud Supabase (${CLOUD_BACKEND_URL})!`
+    );
+    currentBackendUrl = CLOUD_BACKEND_URL;
+    localServerFailed = true;
+    if (socketInstance) {
+      try {
+        socketInstance.disconnect();
+        socketInstance = null;
+      } catch (e) {}
+    }
+  }
+}
 
 // Socket.io singleton
 let socketInstance = null;
 export function getSocket() {
   if (!socketInstance) {
-    socketInstance = io(BACKEND_URL, {
+    socketInstance = io(currentBackendUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
@@ -21,23 +43,45 @@ export function getSocket() {
     });
     socketInstance.on('connect_error', () => {
       // Gracefully ignore socket errors in serverless environments where WebSockets are not available
+      if (isLocalhost && !localServerFailed) {
+        switchToCloud();
+      }
     });
   }
   return socketInstance;
 }
 
-// Generic Fetch helper
+// Generic Fetch helper with intelligent cloud failover
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE}${endpoint}`;
+  let url = `${currentBackendUrl}/api${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers: options.isFormData ? options.headers : headers
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: options.isFormData ? options.headers : headers
+    });
+  } catch (networkErr) {
+    // If local server is offline, immediately failover to Cloud backend!
+    if (isLocalhost && !localServerFailed) {
+      switchToCloud();
+      url = `${currentBackendUrl}/api${endpoint}`;
+      try {
+        response = await fetch(url, {
+          ...options,
+          headers: options.isFormData ? options.headers : headers
+        });
+      } catch (retryErr) {
+        throw new Error('Lỗi kết nối mạng: Không thể kết nối tới máy chủ Bếp Việt.');
+      }
+    } else {
+      throw new Error('Lỗi kết nối mạng: Vui lòng kiểm tra lại đường truyền internet.');
+    }
+  }
 
   const contentType = response.headers.get('content-type') || '';
   let data;
@@ -115,10 +159,29 @@ export const uploadImageFile = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
 
-  const response = await fetch(`${BACKEND_URL}/api/upload`, {
-    method: 'POST',
-    body: formData
-  });
+  let url = `${currentBackendUrl}/api/upload`;
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+  } catch (networkErr) {
+    if (isLocalhost && !localServerFailed) {
+      switchToCloud();
+      url = `${currentBackendUrl}/api/upload`;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+      } catch (retryErr) {
+        throw new Error('Không thể tải ảnh lên (lỗi kết nối máy chủ).');
+      }
+    } else {
+      throw new Error('Không thể tải ảnh lên (lỗi kết nối máy chủ).');
+    }
+  }
 
   const contentType = response.headers.get('content-type') || '';
   let data;
