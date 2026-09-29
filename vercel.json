@@ -31,9 +31,31 @@
       }
     },
     {
+      "source": "/assets/(.*)",
+      "destination": {
+        "service": "client",
+        "path": "/assets/$1"
+      }
+    },
+    {
+      "source": "/manifest.json",
+      "destination": {
+        "service": "client",
+        "path": "/manifest.json"
+      }
+    },
+    {
+      "source": "/sw.js",
+      "destination": {
+        "service": "client",
+        "path": "/sw.js"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
-        "service": "client"
+        "service": "client",
+        "path": "/index.html"
       }
     }
   ]
