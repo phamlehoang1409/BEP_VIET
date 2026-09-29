@@ -101,6 +101,12 @@ router.post('/', async (req, res) => {
     const total_amount = Math.max(0, subtotal - Number(discount) + delivery_fee);
     const order_code = generateOrderCode();
 
+    // Format full address including ward if present
+    let fullAddress = delivery_address.trim();
+    if (ward && ward.trim() && !fullAddress.toLowerCase().includes(ward.trim().toLowerCase())) {
+      fullAddress = `${fullAddress}, ${ward.trim()}`;
+    }
+
     // Find or link user
     let { data: user } = await supabase
       .from('users')
@@ -115,7 +121,7 @@ router.post('/', async (req, res) => {
         .insert({
           phone: normalizedPhone,
           name: customer_name.trim(),
-          address: delivery_address.trim(),
+          address: fullAddress,
           province: province || 'Hồ Chí Minh',
           district: district || '',
           ward: ward || '',
@@ -127,7 +133,7 @@ router.post('/', async (req, res) => {
       if (newUser) userId = newUser.id;
     }
 
-    // Insert order
+    // Insert order (Supabase orders table has no ward column; ward is preserved in delivery_address)
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .insert({
@@ -135,10 +141,9 @@ router.post('/', async (req, res) => {
         user_id: userId,
         customer_name: customer_name.trim(),
         customer_phone: normalizedPhone,
-        delivery_address: delivery_address.trim(),
+        delivery_address: fullAddress,
         province: province || 'Hồ Chí Minh',
         district: district || '',
-        ward: ward || '',
         note: note ? note.trim() : '',
         subtotal,
         discount: Number(discount) || 0,
@@ -182,6 +187,7 @@ router.post('/', async (req, res) => {
     if (io) {
       io.to('admin_room').emit('new_order', {
         ...order,
+        ward: ward || '',
         items: validatedItems
       });
     }
@@ -191,6 +197,7 @@ router.post('/', async (req, res) => {
       message: 'Đặt hàng thành công! Quán Bếp Việt đang chuẩn bị món cho bạn.',
       order: {
         ...order,
+        ward: ward || '',
         items: validatedItems
       }
     });

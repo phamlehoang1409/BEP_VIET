@@ -21,7 +21,8 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
     'admin/chat',
     'menu',
     'checkout',
-    'orders'
+    'orders',
+    'order-success'
   ];
 
   for (const route of routes) {
