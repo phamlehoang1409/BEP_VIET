@@ -65,11 +65,15 @@ export default function FoodManagement() {
   const fetchFoods = async () => {
     try {
       setLoading(true);
+      const params = {};
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.category = selectedCategory;
+      }
+      if (search && search.trim()) {
+        params.search = search.trim();
+      }
       const [fRes, cRes] = await Promise.all([
-        getFoods({
-          category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          search: search.trim() ? search.trim() : undefined
-        }),
+        getFoods(params),
         getCategories()
       ]);
       if (fRes.success) setFoods(fRes.foods || []);

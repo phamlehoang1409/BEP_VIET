@@ -243,11 +243,11 @@ router.get('/', async (req, res) => {
 
     let q = supabase.from('orders').select('*, order_items(*)');
 
-    if (status && status !== 'all') {
+    if (status && status !== 'all' && status !== 'undefined' && status !== 'null') {
       q = q.eq('status', status);
     }
 
-    if (search && search.trim()) {
+    if (search && search.trim() && search.trim() !== 'undefined' && search.trim() !== 'null') {
       const term = search.trim();
       q = q.or(`customer_phone.ilike.%${term}%,customer_name.ilike.%${term}%,order_code.ilike.%${term}%`);
     }

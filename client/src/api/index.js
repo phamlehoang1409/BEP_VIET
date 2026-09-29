@@ -58,10 +58,20 @@ async function request(endpoint, options = {}) {
   return data;
 }
 
+function buildQueryString(params = {}) {
+  const cleanParams = {};
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== undefined && val !== null && val !== '' && val !== 'undefined' && val !== 'null') {
+      cleanParams[key] = val;
+    }
+  }
+  const qs = new URLSearchParams(cleanParams).toString();
+  return qs ? `?${qs}` : '';
+}
+
 // --- Foods API ---
 export const getFoods = (params = {}) => {
-  const query = new URLSearchParams(params).toString();
-  return request(`/foods${query ? `?${query}` : ''}`);
+  return request(`/foods${buildQueryString(params)}`);
 };
 
 export const getFoodById = (id) => request(`/foods/${id}`);
@@ -139,8 +149,7 @@ export const placeOrder = (data) =>
 export const getCustomerOrders = (phone) => request(`/orders/user/${phone}`);
 
 export const getAllOrders = (params = {}) => {
-  const query = new URLSearchParams(params).toString();
-  return request(`/orders${query ? `?${query}` : ''}`);
+  return request(`/orders${buildQueryString(params)}`);
 };
 
 export const getOrderById = (id) => request(`/orders/${id}`);

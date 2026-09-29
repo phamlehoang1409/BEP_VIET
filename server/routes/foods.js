@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
 
     let query = supabase.from('foods').select('*, categories(name, slug)');
 
-    if (category && category !== 'all') {
+    if (category && category !== 'all' && category !== 'undefined' && category !== 'null') {
       if (!isNaN(category)) {
         query = query.eq('category_id', Number(category));
       } else {
@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
       }
     }
 
-    if (search && search.trim()) {
+    if (search && search.trim() && search.trim() !== 'undefined' && search.trim() !== 'null') {
       query = query.ilike('name', `%${search.trim()}%`);
     }
 
