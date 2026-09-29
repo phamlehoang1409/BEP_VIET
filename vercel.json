@@ -31,28 +31,9 @@
       }
     },
     {
-      "source": "/assets/(.*)",
-      "destination": {
-        "service": "client"
-      }
-    },
-    {
-      "source": "/manifest.json",
-      "destination": {
-        "service": "client"
-      }
-    },
-    {
-      "source": "/sw.js",
-      "destination": {
-        "service": "client"
-      }
-    },
-    {
       "source": "/(.*)",
       "destination": {
-        "service": "client",
-        "path": "/"
+        "service": "client"
       }
     }
   ]
