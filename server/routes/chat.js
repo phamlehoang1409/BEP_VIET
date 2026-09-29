@@ -1,23 +1,45 @@
 const express = require('express');
 const router = express.Router();
-const { query, queryOne, run } = require('../db/database');
+const supabase = require('../db/supabase');
 
 // GET all active chat conversations for Admin
-router.get('/rooms', (req, res) => {
+router.get('/rooms', async (req, res) => {
   try {
-    const rooms = query(`
-      SELECT
-        c.room_id,
-        MAX(c.created_at) as last_activity,
-        (SELECT message FROM chat_messages WHERE room_id = c.room_id ORDER BY id DESC LIMIT 1) as last_message,
-        (SELECT sender_role FROM chat_messages WHERE room_id = c.room_id ORDER BY id DESC LIMIT 1) as last_sender_role,
-        (SELECT sender_name FROM chat_messages WHERE room_id = c.room_id AND sender_role = 'customer' ORDER BY id DESC LIMIT 1) as customer_name,
-        SUM(CASE WHEN c.is_read = 0 AND c.sender_role = 'customer' THEN 1 ELSE 0 END) as unread_count
-      FROM chat_messages c
-      GROUP BY c.room_id
-      ORDER BY last_activity DESC
-    `);
+    if (!supabase) {
+      return res.json({ success: true, rooms: [] });
+    }
 
+    const { data: messages, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const roomsMap = new Map();
+    for (const msg of (messages || [])) {
+      if (!roomsMap.has(msg.room_id)) {
+        roomsMap.set(msg.room_id, {
+          room_id: msg.room_id,
+          last_activity: msg.created_at,
+          last_message: msg.message,
+          last_sender_role: msg.sender_role,
+          customer_name: msg.sender_role === 'customer' ? msg.sender_name : null,
+          unread_count: 0
+        });
+      }
+      const room = roomsMap.get(msg.room_id);
+      if (!room.customer_name && msg.sender_role === 'customer') {
+        room.customer_name = msg.sender_name;
+      }
+      if (msg.is_read === false && msg.sender_role === 'customer') {
+        room.unread_count++;
+      }
+    }
+
+    const rooms = Array.from(roomsMap.values());
     return res.json({ success: true, rooms });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -25,22 +47,32 @@ router.get('/rooms', (req, res) => {
 });
 
 // GET messages for a specific room
-router.get('/:roomId', (req, res) => {
+router.get('/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
-    const messages = query(
-      'SELECT * FROM chat_messages WHERE room_id = ? ORDER BY id ASC LIMIT 100',
-      [roomId]
-    );
+    if (!supabase) {
+      return res.json({ success: true, messages: [] });
+    }
 
-    return res.json({ success: true, messages });
+    const { data: messages, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('id', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json({ success: true, messages: messages || [] });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// POST send new chat message via REST (fallback or standard)
-router.post('/', (req, res) => {
+// POST send new chat message via REST
+router.post('/', async (req, res) => {
   try {
     const { room_id, sender_role, sender_phone, sender_name, message, image_url } = req.body;
 
@@ -48,45 +80,62 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Nội dung tin nhắn không được để trống' });
     }
 
-    const result = run(`
-      INSERT INTO chat_messages (room_id, sender_role, sender_phone, sender_name, message, image_url, is_read)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [
-      room_id,
-      sender_role || 'customer',
-      sender_phone || room_id,
-      sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
-      message.trim(),
-      image_url || null,
-      sender_role === 'admin' ? 1 : 0
-    ]);
-
-    const createdMsg = queryOne('SELECT * FROM chat_messages WHERE id = ?', [Number(result.lastInsertRowid)]);
-
-    // Socket broadcast
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`room_${room_id}`).to('admin_room').emit('new_message', createdMsg);
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database service unavailable' });
     }
 
-    return res.status(201).json({ success: true, message: createdMsg });
+    const { data: newMsg, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        room_id,
+        sender_role: sender_role || 'customer',
+        sender_phone: sender_phone || room_id,
+        sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
+        message: message.trim(),
+        image_url: image_url || null,
+        is_read: sender_role === 'admin' ? true : false
+      })
+      .select()
+      .single();
+
+    if (error || !newMsg) {
+      return res.status(500).json({ error: error ? error.message : 'Không thể gửi tin nhắn' });
+    }
+
+    // Broadcast via socket.io
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${room_id}`).to('admin_room').emit('new_message', newMsg);
+    }
+
+    return res.status(201).json({ success: true, message: newMsg });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // PATCH mark messages as read
-router.patch('/:roomId/read', (req, res) => {
+router.patch('/:roomId/read', async (req, res) => {
   try {
     const { roomId } = req.params;
     const { reader_role } = req.body;
 
-    if (reader_role === 'admin') {
-      run("UPDATE chat_messages SET is_read = 1 WHERE room_id = ? AND sender_role = 'customer'", [roomId]);
-    } else {
-      run("UPDATE chat_messages SET is_read = 1 WHERE room_id = ? AND sender_role = 'admin'", [roomId]);
+    if (!supabase) {
+      return res.json({ success: true });
     }
 
+    let q = supabase
+      .from('chat_messages')
+      .update({ is_read: true })
+      .eq('room_id', roomId);
+
+    if (reader_role === 'admin') {
+      q = q.eq('sender_role', 'customer');
+    } else {
+      q = q.eq('sender_role', 'admin');
+    }
+
+    await q;
     return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: error.message });

@@ -1,51 +1,78 @@
 const express = require('express');
 const router = express.Router();
-const { query, queryOne } = require('../db/database');
+const supabase = require('../db/supabase');
 
 // GET dashboard summary stats
-router.get('/summary', (req, res) => {
+router.get('/summary', async (req, res) => {
   try {
-    const totalRevenueRow = queryOne(`
-      SELECT SUM(total_amount) as total_revenue
-      FROM orders
-      WHERE status != 'cancelled'
-    `);
-    const totalRevenue = totalRevenueRow ? totalRevenueRow.total_revenue || 0 : 0;
+    if (!supabase) {
+      return res.json({
+        success: true,
+        stats: {
+          totalRevenue: 0,
+          totalOrders: 0,
+          pendingOrders: 0,
+          deliveringOrders: 0,
+          completedOrders: 0,
+          totalFoods: 0,
+          totalCustomers: 0,
+          topFoods: [],
+          recentOrders: []
+        }
+      });
+    }
 
-    const totalOrdersRow = queryOne('SELECT COUNT(*) as count FROM orders');
-    const totalOrders = totalOrdersRow ? totalOrdersRow.count : 0;
+    // 1. Fetch Orders
+    const { data: ordersData, error: ordersErr } = await supabase
+      .from('orders')
+      .select('*')
+      .order('id', { ascending: false });
 
-    const pendingOrdersRow = queryOne('SELECT COUNT(*) as count FROM orders WHERE status = "pending"');
-    const pendingOrders = pendingOrdersRow ? pendingOrdersRow.count : 0;
+    const allOrders = ordersData || [];
+    const totalRevenue = allOrders
+      .filter(o => o.status !== 'cancelled')
+      .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+    const totalOrders = allOrders.length;
+    const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
+    const deliveringOrders = allOrders.filter(o => o.status === 'delivering').length;
+    const completedOrders = allOrders.filter(o => o.status === 'completed').length;
 
-    const deliveringOrdersRow = queryOne('SELECT COUNT(*) as count FROM orders WHERE status = "delivering"');
-    const deliveringOrders = deliveringOrdersRow ? deliveringOrdersRow.count : 0;
+    // 2. Fetch Foods
+    const { data: foodsData } = await supabase
+      .from('foods')
+      .select('*, categories(name)')
+      .order('sales_count', { ascending: false });
 
-    const completedOrdersRow = queryOne('SELECT COUNT(*) as count FROM orders WHERE status = "completed"');
-    const completedOrders = completedOrdersRow ? completedOrdersRow.count : 0;
+    const allFoods = foodsData || [];
+    const totalFoods = allFoods.length;
+    const topFoods = allFoods.slice(0, 5).map(f => ({
+      id: f.id,
+      name: f.name,
+      price: f.price,
+      image: f.image,
+      sales_count: f.sales_count || 0,
+      category_name: f.categories ? f.categories.name : null
+    }));
 
-    const totalFoodsRow = queryOne('SELECT COUNT(*) as count FROM foods');
-    const totalFoods = totalFoodsRow ? totalFoodsRow.count : 0;
+    // 3. Fetch Customers count
+    const { data: customersData } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'customer');
 
-    const totalCustomersRow = queryOne('SELECT COUNT(*) as count FROM users WHERE role = "customer"');
-    const totalCustomers = totalCustomersRow ? totalCustomersRow.count : 0;
+    const totalCustomers = (customersData || []).length;
 
-    // Top 5 best selling foods
-    const topFoods = query(`
-      SELECT f.id, f.name, f.price, f.image, f.sales_count, c.name as category_name
-      FROM foods f
-      LEFT JOIN categories c ON f.category_id = c.id
-      ORDER BY f.sales_count DESC
-      LIMIT 5
-    `);
-
-    // Recent 5 orders
-    const recentOrders = query(`
-      SELECT id, order_code, customer_name, customer_phone, total_amount, payment_method, status, created_at
-      FROM orders
-      ORDER BY id DESC
-      LIMIT 5
-    `);
+    // 4. Recent 5 orders
+    const recentOrders = allOrders.slice(0, 5).map(o => ({
+      id: o.id,
+      order_code: o.order_code,
+      customer_name: o.customer_name,
+      customer_phone: o.customer_phone,
+      total_amount: o.total_amount,
+      payment_method: o.payment_method,
+      status: o.status,
+      created_at: o.created_at
+    }));
 
     return res.json({
       success: true,

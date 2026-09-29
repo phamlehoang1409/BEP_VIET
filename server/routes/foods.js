@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query, queryOne, run } = require('../db/database');
+const supabase = require('../db/supabase');
 
 function cleanImageUrl(url) {
   if (!url || typeof url !== 'string') return url;
@@ -17,57 +17,83 @@ function cleanImageUrl(url) {
   return cleaned;
 }
 
+function formatFood(f) {
+  if (!f) return null;
+  return {
+    ...f,
+    category_name: f.categories ? f.categories.name : (f.category_name || null),
+    category_slug: f.categories ? f.categories.slug : (f.category_slug || null),
+    is_available: f.is_available ? 1 : 0,
+    is_featured: f.is_featured ? 1 : 0
+  };
+}
+
 // GET all categories
-router.get('/categories', (req, res) => {
+router.get('/categories', async (req, res) => {
   try {
-    const categories = query('SELECT * FROM categories ORDER BY display_order ASC, name ASC');
-    return res.json({ success: true, categories });
+    if (supabase) {
+      const { data: categories, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      return res.json({ success: true, categories: categories || [] });
+    }
+    return res.json({ success: true, categories: [] });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // GET all foods with filters
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { category, search, sort, available_only } = req.query;
-    let sql = `
-      SELECT f.*, c.name as category_name, c.slug as category_slug
-      FROM foods f
-      LEFT JOIN categories c ON f.category_id = c.id
-      WHERE 1=1
-    `;
-    const params = [];
+
+    if (!supabase) {
+      return res.json({ success: true, foods: [] });
+    }
+
+    let query = supabase.from('foods').select('*, categories(name, slug)');
 
     if (category && category !== 'all') {
-      sql += ' AND (c.slug = ? OR f.category_id = ?)';
-      params.push(category, category);
+      if (!isNaN(category)) {
+        query = query.eq('category_id', Number(category));
+      } else {
+        query = query.eq('categories.slug', category);
+      }
     }
 
     if (search && search.trim()) {
-      sql += ' AND (f.name LIKE ? OR f.description LIKE ?)';
-      const term = `%${search.trim()}%`;
-      params.push(term, term);
+      query = query.ilike('name', `%${search.trim()}%`);
     }
 
     if (available_only === 'true' || available_only === '1') {
-      sql += ' AND f.is_available = 1';
+      query = query.eq('is_available', true);
     }
 
-    // Sort order
     if (sort === 'price_asc') {
-      sql += ' ORDER BY f.price ASC';
+      query = query.order('price', { ascending: true });
     } else if (sort === 'price_desc') {
-      sql += ' ORDER BY f.price DESC';
+      query = query.order('price', { ascending: false });
     } else if (sort === 'rating') {
-      sql += ' ORDER BY f.rating DESC';
+      query = query.order('rating', { ascending: false });
     } else if (sort === 'popular') {
-      sql += ' ORDER BY f.sales_count DESC';
+      query = query.order('sales_count', { ascending: false });
     } else {
-      sql += ' ORDER BY f.is_featured DESC, f.id DESC';
+      query = query.order('is_featured', { ascending: false }).order('id', { ascending: false });
     }
 
-    const foods = query(sql, params);
+    const { data, error } = await query;
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const foods = (data || []).map(formatFood);
     return res.json({ success: true, foods });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -75,26 +101,30 @@ router.get('/', (req, res) => {
 });
 
 // GET single food by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const food = queryOne(`
-      SELECT f.*, c.name as category_name
-      FROM foods f
-      LEFT JOIN categories c ON f.category_id = c.id
-      WHERE f.id = ?
-    `, [req.params.id]);
-
-    if (!food) {
+    if (!supabase) {
       return res.status(404).json({ error: 'Món ăn không tồn tại' });
     }
-    return res.json({ success: true, food });
+
+    const { data: food, error } = await supabase
+      .from('foods')
+      .select('*, categories(name, slug)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (error || !food) {
+      return res.status(404).json({ error: 'Món ăn không tồn tại' });
+    }
+
+    return res.json({ success: true, food: formatFood(food) });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // POST create new food
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       name,
@@ -121,29 +151,31 @@ router.post('/', (req, res) => {
 
     const finalImage = cleanImageUrl(image);
 
-    const result = run(`
-      INSERT INTO foods (
-        name, category_id, description, price, original_price,
-        image, prep_time, spicy_level, is_featured, is_available
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      name.trim(),
-      category_id || 1,
-      description ? description.trim() : '',
-      Number(price),
-      original_price ? Number(original_price) : null,
-      finalImage,
-      prep_time ? Number(prep_time) : 20,
-      spicy_level ? Number(spicy_level) : 0,
-      is_featured ? 1 : 0,
-      is_available !== undefined ? (is_available ? 1 : 0) : 1
-    ]);
+    const { data: newFood, error } = await supabase
+      .from('foods')
+      .insert({
+        name: name.trim(),
+        category_id: Number(category_id) || 1,
+        description: description ? description.trim() : '',
+        price: Number(price),
+        original_price: original_price ? Number(original_price) : null,
+        image: finalImage,
+        prep_time: prep_time ? Number(prep_time) : 20,
+        spicy_level: spicy_level ? Number(spicy_level) : 0,
+        is_featured: !!is_featured,
+        is_available: is_available !== undefined ? !!is_available : true
+      })
+      .select('*, categories(name, slug)')
+      .single();
 
-    const newFood = queryOne('SELECT * FROM foods WHERE id = ?', [Number(result.lastInsertRowid)]);
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Thêm món ăn thành công!',
-      food: newFood
+      food: formatFood(newFood)
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -151,7 +183,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT update food details
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -167,45 +199,33 @@ router.put('/:id', (req, res) => {
       is_available
     } = req.body;
 
-    const existing = queryOne('SELECT * FROM foods WHERE id = ?', [id]);
-    if (!existing) {
-      return res.status(404).json({ error: 'Món ăn không tồn tại' });
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name.trim();
+    if (category_id !== undefined) updateFields.category_id = Number(category_id);
+    if (description !== undefined) updateFields.description = description.trim();
+    if (price !== undefined) updateFields.price = Number(price);
+    if (original_price !== undefined) updateFields.original_price = original_price ? Number(original_price) : null;
+    if (image !== undefined) updateFields.image = cleanImageUrl(image);
+    if (prep_time !== undefined) updateFields.prep_time = Number(prep_time);
+    if (spicy_level !== undefined) updateFields.spicy_level = Number(spicy_level);
+    if (is_featured !== undefined) updateFields.is_featured = !!is_featured;
+    if (is_available !== undefined) updateFields.is_available = !!is_available;
+
+    const { data: updated, error } = await supabase
+      .from('foods')
+      .update(updateFields)
+      .eq('id', id)
+      .select('*, categories(name, slug)')
+      .maybeSingle();
+
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Món ăn không tồn tại' });
     }
 
-    const finalImage = image ? cleanImageUrl(image) : existing.image;
-
-    run(`
-      UPDATE foods SET
-        name = ?,
-        category_id = ?,
-        description = ?,
-        price = ?,
-        original_price = ?,
-        image = ?,
-        prep_time = ?,
-        spicy_level = ?,
-        is_featured = ?,
-        is_available = ?
-      WHERE id = ?
-    `, [
-      name ? name.trim() : existing.name,
-      category_id !== undefined ? category_id : existing.category_id,
-      description !== undefined ? description : existing.description,
-      price !== undefined ? Number(price) : existing.price,
-      original_price !== undefined ? (original_price ? Number(original_price) : null) : existing.original_price,
-      image ? image.trim() : existing.image,
-      prep_time !== undefined ? Number(prep_time) : existing.prep_time,
-      spicy_level !== undefined ? Number(spicy_level) : existing.spicy_level,
-      is_featured !== undefined ? (is_featured ? 1 : 0) : existing.is_featured,
-      is_available !== undefined ? (is_available ? 1 : 0) : existing.is_available,
-      id
-    ]);
-
-    const updated = queryOne('SELECT * FROM foods WHERE id = ?', [id]);
     return res.json({
       success: true,
       message: 'Cập nhật món ăn thành công!',
-      food: updated
+      food: formatFood(updated)
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -213,7 +233,7 @@ router.put('/:id', (req, res) => {
 });
 
 // PATCH quick edit price
-router.patch('/:id/price', (req, res) => {
+router.patch('/:id/price', async (req, res) => {
   try {
     const { id } = req.params;
     const { price, original_price } = req.body;
@@ -222,16 +242,24 @@ router.patch('/:id/price', (req, res) => {
       return res.status(400).json({ error: 'Giá tiền phải lớn hơn 0' });
     }
 
-    run(
-      'UPDATE foods SET price = ?, original_price = ? WHERE id = ?',
-      [Number(price), original_price ? Number(original_price) : null, id]
-    );
+    const { data: updated, error } = await supabase
+      .from('foods')
+      .update({
+        price: Number(price),
+        original_price: original_price ? Number(original_price) : null
+      })
+      .eq('id', id)
+      .select('*, categories(name, slug)')
+      .maybeSingle();
 
-    const updated = queryOne('SELECT * FROM foods WHERE id = ?', [id]);
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Món ăn không tồn tại' });
+    }
+
     return res.json({
       success: true,
       message: 'Cập nhật giá thành công!',
-      food: updated
+      food: formatFood(updated)
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -239,21 +267,33 @@ router.patch('/:id/price', (req, res) => {
 });
 
 // PATCH toggle stock status
-router.patch('/:id/status', (req, res) => {
+router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const food = queryOne('SELECT is_available FROM foods WHERE id = ?', [id]);
-    if (!food) {
+    const { data: food, error: findErr } = await supabase
+      .from('foods')
+      .select('is_available')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (findErr || !food) {
       return res.status(404).json({ error: 'Món ăn không tồn tại' });
     }
 
-    const nextStatus = food.is_available === 1 ? 0 : 1;
-    run('UPDATE foods SET is_available = ? WHERE id = ?', [nextStatus, id]);
+    const nextStatus = !food.is_available;
+    const { error: updateErr } = await supabase
+      .from('foods')
+      .update({ is_available: nextStatus })
+      .eq('id', id);
+
+    if (updateErr) {
+      return res.status(500).json({ error: updateErr.message });
+    }
 
     return res.json({
       success: true,
-      message: nextStatus === 1 ? 'Đã bật phục vụ món này' : 'Đã chuyển thành Hết Món',
-      is_available: nextStatus
+      message: nextStatus ? 'Đã bật phục vụ món này' : 'Đã chuyển thành Hết Món',
+      is_available: nextStatus ? 1 : 0
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -261,15 +301,24 @@ router.patch('/:id/status', (req, res) => {
 });
 
 // DELETE food
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = queryOne('SELECT * FROM foods WHERE id = ?', [id]);
-    if (!existing) {
+    const { data: existing, error: findErr } = await supabase
+      .from('foods')
+      .select('name')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (findErr || !existing) {
       return res.status(404).json({ error: 'Món ăn không tồn tại' });
     }
 
-    run('DELETE FROM foods WHERE id = ?', [id]);
+    const { error: delErr } = await supabase.from('foods').delete().eq('id', id);
+    if (delErr) {
+      return res.status(500).json({ error: delErr.message });
+    }
+
     return res.json({
       success: true,
       message: `Đã xoá món "${existing.name}" thành công!`

@@ -11,6 +11,7 @@ const chatRoutes = require('./routes/chat');
 const statsRoutes = require('./routes/stats');
 const uploadRoutes = require('./routes/upload');
 const setupChatSocket = require('./socket/chatSocket');
+const supabase = require('./db/supabase');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,28 +46,38 @@ app.use('/api/upload', uploadRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'Vietnam Food Delivery Backend API',
-    database: 'SQLite (node:sqlite)',
+    app: 'Vietnam Food Delivery Backend API (Bếp Việt)',
+    database: supabase ? 'Supabase PostgreSQL (Cloud Connected)' : 'Disconnected',
+    runtime: process.version,
+    environment: process.env.VERCEL ? 'Vercel Serverless' : 'Local Node Server',
     time: new Date().toISOString()
   });
 });
 
-// Serve frontend production build
+// Serve frontend production build if available
 const clientDistPath = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDistPath));
 
 // Fallback to index.html for React SPA client-side routing
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+    const indexPath = path.join(clientDistPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        res.status(200).send('API backend is online.');
+      }
+    });
   }
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Fullstack App running on http://localhost:${PORT}`);
-  console.log(`📁 Uploads available at http://localhost:${PORT}/uploads`);
-});
+// Only bind port when not running inside Vercel serverless environment
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Fullstack App running on http://localhost:${PORT}`);
+    console.log(`📁 Uploads available at http://localhost:${PORT}/uploads`);
+  });
+}
 
 module.exports = app;
 module.exports.server = server;

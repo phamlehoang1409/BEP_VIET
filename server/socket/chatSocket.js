@@ -1,4 +1,4 @@
-const { run, queryOne } = require('../db/database');
+const supabase = require('../db/supabase');
 
 function setupChatSocket(io) {
   io.on('connection', (socket) => {
@@ -19,25 +19,44 @@ function setupChatSocket(io) {
     });
 
     // Send chat message
-    socket.on('chat_message', (data) => {
+    socket.on('chat_message', async (data) => {
       try {
         const { room_id, sender_role, sender_phone, sender_name, message, image_url } = data;
         if (!room_id || !message || !message.trim()) return;
 
-        const res = run(`
-          INSERT INTO chat_messages (room_id, sender_role, sender_phone, sender_name, message, image_url, is_read)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [
-          room_id,
-          sender_role || 'customer',
-          sender_phone || room_id,
-          sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
-          message.trim(),
-          image_url || null,
-          sender_role === 'admin' ? 1 : 0
-        ]);
+        let newMsg = null;
+        if (supabase) {
+          const { data: inserted, error } = await supabase
+            .from('chat_messages')
+            .insert({
+              room_id,
+              sender_role: sender_role || 'customer',
+              sender_phone: sender_phone || room_id,
+              sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
+              message: message.trim(),
+              image_url: image_url || null,
+              is_read: sender_role === 'admin' ? true : false
+            })
+            .select()
+            .single();
 
-        const newMsg = queryOne('SELECT * FROM chat_messages WHERE id = ?', [Number(res.lastInsertRowid)]);
+          if (!error && inserted) {
+            newMsg = inserted;
+          }
+        }
+
+        if (!newMsg) {
+          newMsg = {
+            id: Date.now(),
+            room_id,
+            sender_role: sender_role || 'customer',
+            sender_phone: sender_phone || room_id,
+            sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
+            message: message.trim(),
+            image_url: image_url || null,
+            created_at: new Date().toISOString()
+          };
+        }
 
         // Broadcast to customer room and admin room without duplicate packets
         io.to(`room_${room_id}`).to('admin_room').emit('new_message', newMsg);

@@ -1,8 +1,11 @@
 {
   "name": "food-delivery-server",
   "version": "1.0.0",
-  "description": "Backend API for Vietnam Food Ordering App with SQL and Real-time Chat",
+  "description": "Backend API for Vietnam Food Ordering App with Supabase PostgreSQL and Real-time Chat",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js"

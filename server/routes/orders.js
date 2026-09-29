@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query, queryOne, run } = require('../db/database');
+const supabase = require('../db/supabase');
 
 const VN_PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 
@@ -13,7 +13,6 @@ function normalizePhone(phone) {
   return cleaned;
 }
 
-// Generate human-friendly order code (e.g. ORD-2609-4821)
 function generateOrderCode() {
   const date = new Date();
   const dateStr = `${date.getFullYear().toString().slice(-2)}${(date.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -22,7 +21,7 @@ function generateOrderCode() {
 }
 
 // Place a new order
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       customer_name,
@@ -62,28 +61,37 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Giỏ hàng trống! Vui lòng chọn ít nhất một món ăn.' });
     }
 
+    if (!supabase) {
+      return res.status(500).json({ error: 'Dịch vụ cơ sở dữ liệu hiện không khả dụng.' });
+    }
+
     // Calculate subtotal
     let subtotal = 0;
     const validatedItems = [];
 
     for (const item of items) {
-      const food = queryOne('SELECT * FROM foods WHERE id = ?', [item.food_id]);
+      const { data: food } = await supabase
+        .from('foods')
+        .select('*')
+        .eq('id', item.food_id)
+        .maybeSingle();
+
       if (!food) {
         return res.status(400).json({ error: `Món ăn mã #${item.food_id} không tồn tại!` });
       }
-      if (food.is_available === 0) {
+      if (food.is_available === false) {
         return res.status(400).json({ error: `Món "${food.name}" hiện đang tạm hết, vui lòng chọn món khác!` });
       }
 
       const qty = Math.max(1, parseInt(item.quantity) || 1);
-      const itemTotal = food.price * qty;
+      const itemTotal = Number(food.price) * qty;
       subtotal += itemTotal;
 
       validatedItems.push({
         food_id: food.id,
         food_name: food.name,
         food_image: food.image,
-        price: food.price,
+        price: Number(food.price),
         quantity: qty,
         total: itemTotal
       });
@@ -94,190 +102,246 @@ router.post('/', (req, res) => {
     const order_code = generateOrderCode();
 
     // Find or link user
-    let user = queryOne('SELECT id FROM users WHERE phone = ?', [normalizedPhone]);
+    let { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone', normalizedPhone)
+      .maybeSingle();
+
     let userId = user ? user.id : null;
     if (!userId) {
-      const uRes = run(
-        'INSERT INTO users (phone, name, address, province, district, ward) VALUES (?, ?, ?, ?, ?, ?)',
-        [normalizedPhone, customer_name.trim(), delivery_address.trim(), province || '', district || '', ward || '']
-      );
-      userId = Number(uRes.lastInsertRowid);
-    } else {
-      // Update latest address
-      run(
-        'UPDATE users SET address = ?, province = ?, district = ?, ward = ? WHERE id = ?',
-        [delivery_address.trim(), province || '', district || '', ward || '', userId]
-      );
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          phone: normalizedPhone,
+          name: customer_name.trim(),
+          address: delivery_address.trim(),
+          province: province || 'Hồ Chí Minh',
+          district: district || '',
+          ward: ward || '',
+          role: 'customer'
+        })
+        .select('id')
+        .single();
+
+      if (newUser) userId = newUser.id;
     }
 
-    // Full delivery address string
-    const fullAddress = [delivery_address.trim(), ward, district, province].filter(Boolean).join(', ');
+    // Insert order
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .insert({
+        order_code,
+        user_id: userId,
+        customer_name: customer_name.trim(),
+        customer_phone: normalizedPhone,
+        delivery_address: delivery_address.trim(),
+        province: province || 'Hồ Chí Minh',
+        district: district || '',
+        ward: ward || '',
+        note: note ? note.trim() : '',
+        subtotal,
+        discount: Number(discount) || 0,
+        delivery_fee,
+        total_amount,
+        payment_method: payment_method || 'COD',
+        status: 'pending'
+      })
+      .select()
+      .single();
 
-    // Insert Order
-    const orderRes = run(`
-      INSERT INTO orders (
-        order_code, user_id, customer_name, customer_phone, delivery_address,
-        province, district, note, subtotal, discount, delivery_fee, total_amount, payment_method, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-    `, [
-      order_code,
-      userId,
-      customer_name.trim(),
-      normalizedPhone,
-      fullAddress,
-      province || '',
-      district || '',
-      note ? note.trim() : '',
-      subtotal,
-      Number(discount),
-      delivery_fee,
-      total_amount,
-      payment_method || 'COD'
-    ]);
-
-    const orderId = Number(orderRes.lastInsertRowid);
-
-    // Insert Items
-    const insertItem = queryOne ? (foodItem) => {
-      run(`
-        INSERT INTO order_items (order_id, food_id, food_name, food_image, price, quantity, total)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [orderId, foodItem.food_id, foodItem.food_name, foodItem.food_image, foodItem.price, foodItem.quantity, foodItem.total]);
-
-      // Update sales count
-      run('UPDATE foods SET sales_count = sales_count + ? WHERE id = ?', [foodItem.quantity, foodItem.food_id]);
-    } : null;
-
-    for (const item of validatedItems) {
-      insertItem(item);
+    if (orderErr || !order) {
+      return res.status(500).json({ error: orderErr ? orderErr.message : 'Không thể tạo đơn hàng' });
     }
 
-    const createdOrder = queryOne('SELECT * FROM orders WHERE id = ?', [orderId]);
-    createdOrder.items = validatedItems;
+    // Insert order items
+    const orderItemsData = validatedItems.map(it => ({
+      order_id: order.id,
+      food_id: it.food_id,
+      food_name: it.food_name,
+      food_image: it.food_image,
+      price: it.price,
+      quantity: it.quantity,
+      total: it.total
+    }));
 
-    // Emit Socket notification to Admin
+    await supabase.from('order_items').insert(orderItemsData);
+
+    // Update sales_count asynchronously
+    for (const it of validatedItems) {
+      try {
+        const { data: cur } = await supabase.from('foods').select('sales_count').eq('id', it.food_id).maybeSingle();
+        if (cur) {
+          await supabase.from('foods').update({ sales_count: (cur.sales_count || 0) + it.quantity }).eq('id', it.food_id);
+        }
+      } catch (e) {}
+    }
+
+    // Emit socket event if io is available
     const io = req.app.get('io');
     if (io) {
-      io.to('admin_room').emit('new_order', createdOrder);
+      io.to('admin_room').emit('new_order', {
+        ...order,
+        items: validatedItems
+      });
     }
 
     return res.status(201).json({
       success: true,
-      message: 'Đặt món thành công! Bếp Việt đang chuẩn bị món ăn cho bạn.',
-      order: createdOrder
+      message: 'Đặt hàng thành công! Quán Bếp Việt đang chuẩn bị món cho bạn.',
+      order: {
+        ...order,
+        items: validatedItems
+      }
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// GET all orders (for Admin)
-router.get('/', (req, res) => {
+// GET customer order history by phone
+router.get('/user/:phone', async (req, res) => {
   try {
-    const { status, search, limit = 50 } = req.query;
-    let sql = 'SELECT * FROM orders WHERE 1=1';
-    const params = [];
+    const normalizedPhone = normalizePhone(req.params.phone);
+    if (!normalizedPhone) {
+      return res.status(400).json({ error: 'Số điện thoại không hợp lệ' });
+    }
+
+    if (!supabase) {
+      return res.json({ success: true, orders: [] });
+    }
+
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('customer_phone', normalizedPhone)
+      .order('id', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const formatted = (orders || []).map(o => ({
+      ...o,
+      items: o.order_items || []
+    }));
+
+    return res.json({ success: true, orders: formatted });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// GET all orders for Admin with filters
+router.get('/', async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    if (!supabase) {
+      return res.json({ success: true, orders: [] });
+    }
+
+    let q = supabase.from('orders').select('*, order_items(*)');
 
     if (status && status !== 'all') {
-      sql += ' AND status = ?';
-      params.push(status);
+      q = q.eq('status', status);
     }
 
     if (search && search.trim()) {
-      sql += ' AND (order_code LIKE ? OR customer_phone LIKE ? OR customer_name LIKE ?)';
-      const term = `%${search.trim()}%`;
-      params.push(term, term, term);
+      const term = search.trim();
+      q = q.or(`customer_phone.ilike.%${term}%,customer_name.ilike.%${term}%,order_code.ilike.%${term}%`);
     }
 
-    sql += ' ORDER BY id DESC LIMIT ?';
-    params.push(Number(limit));
+    q = q.order('id', { ascending: false });
 
-    const orders = query(sql, params);
-
-    // Attach items to each order
-    for (const order of orders) {
-      order.items = query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
+    const { data: orders, error } = await q;
+    if (error) {
+      return res.status(500).json({ error: error.message });
     }
 
-    return res.json({ success: true, orders });
+    const formatted = (orders || []).map(o => ({
+      ...o,
+      items: o.order_items || []
+    }));
+
+    return res.json({ success: true, orders: formatted });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-// GET customer orders by phone
-router.get('/user/:phone', (req, res) => {
+// GET single order by ID
+router.get('/:id', async (req, res) => {
   try {
-    const normalized = normalizePhone(req.params.phone);
-    const orders = query('SELECT * FROM orders WHERE customer_phone = ? ORDER BY id DESC', [normalized]);
-
-    for (const order of orders) {
-      order.items = query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
+    if (!supabase) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
     }
 
-    return res.json({ success: true, orders });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', req.params.id)
+      .maybeSingle();
 
-// GET order by order_code or ID
-router.get('/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    let order;
-    if (isNaN(id)) {
-      order = queryOne('SELECT * FROM orders WHERE order_code = ?', [id]);
-    } else {
-      order = queryOne('SELECT * FROM orders WHERE id = ? OR order_code = ?', [id, id]);
+    if (error || !order) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
     }
 
-    if (!order) {
-      return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
-    }
-
-    order.items = query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
-    return res.json({ success: true, order });
+    return res.json({
+      success: true,
+      order: {
+        ...order,
+        items: order.order_items || []
+      }
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
 // PATCH update order status
-router.patch('/:id/status', (req, res) => {
+router.patch('/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'preparing', 'delivering', 'completed', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Trạng thái đơn hàng không hợp lệ' });
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Trạng thái không hợp lệ! Chỉ chấp nhận: ${validStatuses.join(', ')}`
+      });
     }
 
-    const order = queryOne('SELECT * FROM orders WHERE id = ?', [id]);
-    if (!order) {
+    if (!supabase) {
       return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
     }
 
-    run(
-      'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, id]
-    );
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
 
-    const updated = queryOne('SELECT * FROM orders WHERE id = ?', [id]);
-    updated.items = query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Đơn hàng không tồn tại' });
+    }
 
-    // Notify Customer and Admin via Socket.io
+    const orderFormatted = {
+      ...updated,
+      items: updated.order_items || []
+    };
+
+    // Emit real-time notification
     const io = req.app.get('io');
     if (io) {
-      io.to(`room_${order.customer_phone}`).emit('order_status_updated', updated);
-      io.to('admin_room').emit('order_status_updated', updated);
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', orderFormatted);
     }
 
     return res.json({
       success: true,
       message: 'Cập nhật trạng thái đơn hàng thành công!',
-      order: updated
+      order: orderFormatted
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

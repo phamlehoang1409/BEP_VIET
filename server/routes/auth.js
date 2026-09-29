@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query, queryOne, run } = require('../db/database');
+const supabase = require('../db/supabase');
 
 // Vietnamese phone number validation regex
 // Starts with 0 or +84, followed by 3, 5, 7, 8, 9, followed by 8 digits (total 10 digits)
@@ -29,7 +29,7 @@ router.post('/request-otp', (req, res) => {
     });
   }
 
-  // Pre-fixed demo OTP or 6-digit random
+  // Pre-fixed demo OTP
   const demoOtp = '123456';
 
   return res.json({
@@ -41,100 +41,182 @@ router.post('/request-otp', (req, res) => {
 });
 
 // Verify OTP & Login / Register
-router.post('/verify-otp', (req, res) => {
-  const { phone, otp, name } = req.body;
-  const normalized = normalizePhone(phone);
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp, name } = req.body;
+    const normalized = normalizePhone(phone);
 
-  if (!normalized || !VN_PHONE_REGEX.test(normalized)) {
-    return res.status(400).json({ error: 'Số điện thoại không hợp lệ.' });
+    if (!normalized || !VN_PHONE_REGEX.test(normalized)) {
+      return res.status(400).json({ error: 'Số điện thoại không hợp lệ.' });
+    }
+
+    if (otp !== '123456') {
+      return res.status(400).json({ error: 'Mã OTP không chính xác! Vui lòng nhập 123456.' });
+    }
+
+    // Check if user exists in Supabase
+    let user = null;
+    if (supabase) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', normalized)
+        .maybeSingle();
+
+      if (existingUser) {
+        user = existingUser;
+      } else {
+        const userName = name && name.trim() ? name.trim() : `Khách hàng ${normalized.slice(-4)}`;
+        const { data: newUser, error: insertErr } = await supabase
+          .from('users')
+          .insert({
+            phone: normalized,
+            name: userName,
+            role: 'customer'
+          })
+          .select()
+          .single();
+
+        if (!insertErr && newUser) {
+          user = newUser;
+        }
+      }
+    }
+
+    // Fallback if DB unavailable
+    if (!user) {
+      user = {
+        id: Date.now(),
+        phone: normalized,
+        name: name && name.trim() ? name.trim() : `Khách hàng ${normalized.slice(-4)}`,
+        role: 'customer'
+      };
+    }
+
+    return res.json({
+      success: true,
+      user,
+      message: 'Đăng nhập thành công!'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-
-  if (otp !== '123456') {
-    return res.status(400).json({ error: 'Mã OTP không chính xác! Vui lòng nhập 123456.' });
-  }
-
-  // Check if user exists
-  let user = queryOne('SELECT * FROM users WHERE phone = ?', [normalized]);
-
-  if (!user) {
-    // Auto register customer
-    const userName = name && name.trim() ? name.trim() : `Khách hàng ${normalized.slice(-4)}`;
-    const result = run(
-      'INSERT INTO users (phone, name, role) VALUES (?, ?, ?)',
-      [normalized, userName, 'customer']
-    );
-    user = queryOne('SELECT * FROM users WHERE id = ?', [Number(result.lastInsertRowid)]);
-  }
-
-  return res.json({
-    success: true,
-    user,
-    message: 'Đăng nhập thành công!'
-  });
 });
 
 // Admin login with required password 14092006
-router.post('/admin-login', (req, res) => {
-  const { passcode } = req.body;
+router.post('/admin-login', async (req, res) => {
+  try {
+    const { passcode } = req.body;
 
-  if (!passcode) {
-    return res.status(400).json({ error: 'Vui lòng nhập mật khẩu quản trị viên!' });
+    if (!passcode) {
+      return res.status(400).json({ error: 'Vui lòng nhập mật khẩu quản trị viên!' });
+    }
+
+    // Exact password check: 14092006
+    if (passcode !== '14092006') {
+      return res.status(401).json({ error: 'Mật khẩu quản trị viên không chính xác! Vui lòng nhập đúng mật khẩu.' });
+    }
+
+    let adminUser = null;
+    if (supabase) {
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'admin')
+          .maybeSingle();
+        adminUser = data;
+      } catch (err) {
+        console.warn('Supabase query error:', err.message);
+      }
+    }
+
+    if (!adminUser) {
+      adminUser = {
+        id: 1,
+        phone: '0909999999',
+        name: 'Quản Trị Viên Bếp Việt',
+        role: 'admin'
+      };
+    }
+
+    return res.json({
+      success: true,
+      user: adminUser,
+      token: 'admin-authenticated-token-14092006',
+      message: 'Đăng nhập trang Quản Trị thành công!'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-
-  // Exact password check: 14092006
-  if (passcode !== '14092006') {
-    return res.status(401).json({ error: 'Mật khẩu quản trị viên không chính xác! Vui lòng nhập đúng mật khẩu.' });
-  }
-
-  let adminUser = queryOne('SELECT * FROM users WHERE role = ? LIMIT 1', ['admin']);
-  if (!adminUser) {
-    const resAdmin = run(
-      'INSERT INTO users (phone, name, role) VALUES (?, ?, ?)',
-      ['0909999999', 'Quản Trị Viên Bếp Việt', 'admin']
-    );
-    adminUser = queryOne('SELECT * FROM users WHERE id = ?', [Number(resAdmin.lastInsertRowid)]);
-  }
-
-  return res.json({
-    success: true,
-    user: adminUser,
-    token: 'admin-authenticated-token-14092006',
-    message: 'Đăng nhập trang Quản Trị thành công!'
-  });
 });
 
 // Update Profile & Address
-router.put('/profile', (req, res) => {
-  const { phone, name, address, province, district, ward } = req.body;
-  const normalized = normalizePhone(phone);
+router.put('/profile', async (req, res) => {
+  try {
+    const { phone, name, address, province, district, ward } = req.body;
+    const normalized = normalizePhone(phone);
 
-  if (!normalized) {
-    return res.status(400).json({ error: 'Thiếu số điện thoại' });
+    if (!normalized) {
+      return res.status(400).json({ error: 'Thiếu số điện thoại' });
+    }
+
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name;
+    if (address !== undefined) updateFields.address = address;
+    if (province !== undefined) updateFields.province = province;
+    if (district !== undefined) updateFields.district = district;
+    if (ward !== undefined) updateFields.ward = ward;
+
+    if (supabase) {
+      const { data: updatedUser, error } = await supabase
+        .from('users')
+        .update(updateFields)
+        .eq('phone', normalized)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      return res.json({ success: true, user: updatedUser });
+    }
+
+    return res.json({
+      success: true,
+      user: { phone: normalized, ...updateFields }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-
-  run(
-    `UPDATE users
-     SET name = COALESCE(?, name),
-         address = COALESCE(?, address),
-         province = COALESCE(?, province),
-         district = COALESCE(?, district),
-         ward = COALESCE(?, ward)
-     WHERE phone = ?`,
-    [name, address, province, district, ward, normalized]
-  );
-
-  const updatedUser = queryOne('SELECT * FROM users WHERE phone = ?', [normalized]);
-  return res.json({ success: true, user: updatedUser });
 });
 
 // Get user profile by phone
-router.get('/:phone', (req, res) => {
-  const normalized = normalizePhone(req.params.phone);
-  const user = queryOne('SELECT * FROM users WHERE phone = ?', [normalized]);
-  if (!user) {
+router.get('/:phone', async (req, res) => {
+  try {
+    const normalized = normalizePhone(req.params.phone);
+    if (!normalized) {
+      return res.status(400).json({ error: 'Số điện thoại không hợp lệ' });
+    }
+
+    if (supabase) {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('phone', normalized)
+        .maybeSingle();
+
+      if (error || !user) {
+        return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+      }
+      return res.json({ success: true, user });
+    }
+
     return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
-  return res.json({ success: true, user });
 });
 
 module.exports = router;

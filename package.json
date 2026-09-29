@@ -1,7 +1,10 @@
 {
   "name": "vietfood-delivery-fullstack",
   "version": "1.0.0",
-  "description": "Fullstack Food Ordering App with SQL, Real-time Chat, Admin Portal & PWA",
+  "description": "Fullstack Food Ordering App with Supabase PostgreSQL, Real-time Chat, Admin Portal & PWA",
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "install:all": "cmd /c \"cd server && npm install\" && cmd /c \"cd client && npm install\"",
     "start:server": "cd server && node index.js",

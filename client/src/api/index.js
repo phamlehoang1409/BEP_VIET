@@ -35,7 +35,23 @@ async function request(endpoint, options = {}) {
     headers: options.isFormData ? options.headers : headers
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  let data;
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = { error: 'Dữ liệu phản hồi từ máy chủ không hợp lệ' };
+    }
+  } else {
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text || `Lỗi máy chủ (${response.status}: ${response.statusText})` };
+    }
+  }
+
   if (!response.ok) {
     throw new Error(data.error || 'Có lỗi xảy ra, vui lòng thử lại sau.');
   }
@@ -90,7 +106,23 @@ export const uploadImageFile = async (file) => {
     body: formData
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  let data;
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = { error: 'Không thể đọc phản hồi từ máy chủ tải ảnh' };
+    }
+  } else {
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text || 'Không thể tải ảnh lên' };
+    }
+  }
+
   if (!response.ok) {
     throw new Error(data.error || 'Không thể tải ảnh lên');
   }
