@@ -31,11 +31,11 @@ function setupChatSocket(io) {
             .insert({
               room_id,
               sender_role: sender_role || 'customer',
-              sender_phone: sender_phone || room_id,
-              sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
+              sender_phone: sender_phone || (sender_role === 'admin' ? '0909999999' : room_id),
+              sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt (Chủ Quán)' : 'Khách hàng'),
               message: message.trim(),
               image_url: image_url || null,
-              is_read: sender_role === 'admin' ? true : false
+              is_read: false
             })
             .select()
             .single();

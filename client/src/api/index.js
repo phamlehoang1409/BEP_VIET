@@ -15,8 +15,12 @@ export function getSocket() {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000
+      reconnectionAttempts: 3,
+      reconnectionDelay: 2000,
+      timeout: 5000
+    });
+    socketInstance.on('connect_error', () => {
+      // Gracefully ignore socket errors in serverless environments where WebSockets are not available
     });
   }
   return socketInstance;

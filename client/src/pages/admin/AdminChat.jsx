@@ -9,9 +9,10 @@ import {
   Sparkles,
   Search,
   CheckCheck,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
-import { getChatRooms, getChatMessages, markChatRead, getSocket } from '../../api';
+import { getChatRooms, getChatMessages, markChatRead, sendChatMessage, getSocket } from '../../api';
 import { useToast } from '../../components/Toast';
 
 const ADMIN_QUICK_TEMPLATES = [
@@ -30,6 +31,7 @@ export default function AdminChat() {
   const [replyText, setReplyText] = useState('');
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
   const [searchPhone, setSearchPhone] = useState('');
 
   const messagesEndRef = useRef(null);
@@ -40,7 +42,6 @@ export default function AdminChat() {
 
   const fetchRooms = async (autoSelect = false) => {
     try {
-      setLoadingRooms(true);
       const res = await getChatRooms();
       if (res.success && res.rooms) {
         setRooms(res.rooms);
@@ -62,7 +63,7 @@ export default function AdminChat() {
       const res = await getChatMessages(roomId);
       if (res.success && res.messages) {
         setMessages(res.messages);
-        markChatRead(roomId, 'admin').catch(console.error);
+        markChatRead(roomId, 'admin').catch(() => {});
       }
     } catch (err) {
       console.error('Error fetching room messages:', err);
@@ -94,19 +95,17 @@ function playChatNotificationSound() {
 
   // Join admin room & initial fetch
   useEffect(() => {
-    socket.emit('join_admin_room');
-
-    const handleConnect = () => {
+    if (socket) {
       socket.emit('join_admin_room');
-    };
-    socket.on('connect', handleConnect);
-
-    fetchRooms(true);
-
-    return () => {
-      socket.off('connect', handleConnect);
-    };
+      const handleConnect = () => socket.emit('join_admin_room');
+      socket.on('connect', handleConnect);
+      return () => socket.off('connect', handleConnect);
+    }
   }, [socket]);
+
+  useEffect(() => {
+    fetchRooms(true);
+  }, []);
 
   // When activeRoomId changes, fetch messages & mark read
   useEffect(() => {
@@ -115,8 +114,60 @@ function playChatNotificationSound() {
     }
   }, [activeRoomId]);
 
+  // Periodic polling for rooms list (every 3.5s)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchRooms(false);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Periodic polling for active room messages (every 2.5s)
+  useEffect(() => {
+    if (!activeRoomId) return;
+
+    let isMounted = true;
+    const pollMessages = async () => {
+      try {
+        const res = await getChatMessages(activeRoomId);
+        if (!isMounted || !res.success || !res.messages) return;
+
+        setMessages((prev) => {
+          if (
+            prev.length === res.messages.length &&
+            prev.length > 0 &&
+            prev[prev.length - 1]?.id === res.messages[res.messages.length - 1]?.id
+          ) {
+            return prev;
+          }
+
+          // Check if any new message from customer arrived
+          const prevIds = new Set(prev.map((m) => m.id));
+          const newCustomerMsgs = res.messages.filter(
+            (m) => !prevIds.has(m.id) && m.sender_role === 'customer'
+          );
+
+          if (newCustomerMsgs.length > 0) {
+            playChatNotificationSound();
+            markChatRead(activeRoomId, 'admin').catch(() => {});
+          }
+
+          return res.messages;
+        });
+      } catch (e) {}
+    };
+
+    const timer = setInterval(pollMessages, 2500);
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [activeRoomId]);
+
   // Handle incoming socket messages in real-time
   useEffect(() => {
+    if (!socket) return;
+
     const handleNewMessage = (newMsg) => {
       const currentActive = activeRoomRef.current;
 
@@ -126,7 +177,7 @@ function playChatNotificationSound() {
           if (newMsg.id && prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        markChatRead(currentActive, 'admin').catch(console.error);
+        markChatRead(currentActive, 'admin').catch(() => {});
         if (newMsg.sender_role === 'customer') {
           playChatNotificationSound();
         }
@@ -157,30 +208,63 @@ function playChatNotificationSound() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = (e) => {
-    e?.preventDefault();
-    if (!replyText.trim() || !activeRoomId) return;
+  // Send admin message: ALWAYS via HTTP API with optimistic UI and socket broadcast
+  const sendAdminMessage = async (text) => {
+    if (!text || !text.trim() || !activeRoomId || sending) return;
+    const content = text.trim();
+    setSending(true);
 
-    socket.emit('chat_message', {
+    const payload = {
       room_id: activeRoomId,
       sender_role: 'admin',
       sender_phone: '0909999999',
       sender_name: 'Bếp Việt (Chủ Quán)',
-      message: replyText.trim()
-    });
+      message: content
+    };
 
+    // Optimistic UI update
+    const tempId = 'temp_' + Date.now();
+    const tempMsg = {
+      id: tempId,
+      ...payload,
+      created_at: new Date().toISOString()
+    };
+
+    setMessages((prev) => [...prev, tempMsg]);
     setReplyText('');
+
+    try {
+      // 1. Guaranteed HTTP REST API write to Supabase
+      const res = await sendChatMessage(payload);
+      if (res.success && res.message) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? res.message : m))
+        );
+      }
+
+      // 2. Also emit to socket if connected
+      if (socket?.connected) {
+        socket.emit('chat_message', payload);
+      }
+
+      // 3. Refresh sidebar rooms
+      fetchRooms(false);
+    } catch (err) {
+      console.error('Error sending admin message:', err);
+      showToast(err.message || 'Không thể gửi tin nhắn!', 'error');
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSend = (e) => {
+    e?.preventDefault();
+    sendAdminMessage(replyText);
   };
 
   const handleTemplateSend = (text) => {
-    if (!activeRoomId) return;
-    socket.emit('chat_message', {
-      room_id: activeRoomId,
-      sender_role: 'admin',
-      sender_phone: '0909999999',
-      sender_name: 'Bếp Việt (Chủ Quán)',
-      message: text
-    });
+    sendAdminMessage(text);
   };
 
   const filteredRooms = rooms.filter(
@@ -294,12 +378,15 @@ function playChatNotificationSound() {
                     <Phone className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-sm text-white">
-                      Khách hàng: {activeRoomId}
+                    <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                      <span>{rooms.find((r) => r.room_id === activeRoomId)?.customer_name || `Khách hàng: ${activeRoomId}`}</span>
+                      {rooms.find((r) => r.room_id === activeRoomId)?.customer_name && (
+                        <span className="text-xs text-slate-400 font-normal">({activeRoomId})</span>
+                      )}
                     </h3>
                     <p className="text-[11px] text-emerald-400 flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping" />
-                      Đang kết nối trực tiếp (Real-time WebSocket)
+                      Kênh chat trực tiếp 2 chiều (Cloud Database & Real-time)
                     </p>
                   </div>
                 </div>
@@ -311,7 +398,7 @@ function playChatNotificationSound() {
                   <div className="text-center text-xs text-slate-500 py-10">Đang tải tin nhắn...</div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-xs text-slate-500 py-10">
-                    Chưa có tin nhắn trong cuộc trò chuyện này.
+                    Chưa có tin nhắn trong cuộc trò chuyện này. Hãy gửi tin nhắn đầu tiên cho khách!
                   </div>
                 ) : (
                   messages.map((msg, idx) => {
@@ -353,8 +440,9 @@ function playChatNotificationSound() {
                 {ADMIN_QUICK_TEMPLATES.map((tmpl, idx) => (
                   <button
                     key={idx}
+                    disabled={sending}
                     onClick={() => handleTemplateSend(tmpl)}
-                    className="whitespace-nowrap text-[11px] font-semibold bg-slate-800 hover:bg-orange-500/20 hover:text-orange-400 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 transition shrink-0"
+                    className="whitespace-nowrap text-[11px] font-semibold bg-slate-800 hover:bg-orange-500/20 hover:text-orange-400 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 transition shrink-0 disabled:opacity-50"
                   >
                     {tmpl}
                   </button>
@@ -372,14 +460,18 @@ function playChatNotificationSound() {
                 />
                 <button
                   type="submit"
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || sending}
                   className={`w-9 h-9 rounded-xl flex items-center justify-center text-white transition ${
-                    replyText.trim()
+                    replyText.trim() && !sending
                       ? 'bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/30 active:scale-95'
                       : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                   }`}
                 >
-                  <Send className="w-4 h-4" />
+                  {sending ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </button>
               </form>
             </>

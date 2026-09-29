@@ -4,6 +4,25 @@ import { useAuth } from './AuthContext';
 
 const ChatContext = createContext();
 
+function playNotificationSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch {}
+}
+
 export function ChatProvider({ children }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -25,39 +44,96 @@ export function ChatProvider({ children }) {
     return guest;
   }, [user]);
 
-  // Customer always joins their customer room
+  // Sync room ID and register with socket
   useEffect(() => {
     const roomId = getCustomerRoom();
     setCurrentRoomId(roomId);
-    socket.emit('join_customer_room', roomId);
-
-    // Fetch conversation history from SQL database
-    getChatMessages(roomId)
-      .then((res) => {
-        if (res.success && res.messages) {
-          setMessages(res.messages);
-          const unread = res.messages.filter((m) => m.sender_role === 'admin' && !m.is_read).length;
-          setUnreadCount(unread);
-        }
-      })
-      .catch(console.error);
+    if (socket) {
+      socket.emit('join_customer_room', roomId);
+    }
   }, [user, getCustomerRoom, socket]);
 
-  // Listen to live socket messages
+  // Polling for new messages (Dual-channel fallback for serverless environments)
   useEffect(() => {
     if (!currentRoomId) return;
 
+    let isMounted = true;
+    const fetchLatest = async () => {
+      try {
+        const res = await getChatMessages(currentRoomId);
+        if (!isMounted || !res.success || !res.messages) return;
+
+        setMessages((prev) => {
+          // If no change in count and latest ID matches, return current state
+          if (
+            prev.length === res.messages.length &&
+            prev.length > 0 &&
+            prev[prev.length - 1]?.id === res.messages[res.messages.length - 1]?.id
+          ) {
+            return prev;
+          }
+
+          // Check if any new message from admin arrived
+          const prevIds = new Set(prev.map((m) => m.id));
+          const newAdminMsgs = res.messages.filter(
+            (m) => !prevIds.has(m.id) && m.sender_role === 'admin'
+          );
+
+          if (newAdminMsgs.length > 0) {
+            playNotificationSound();
+            if (isChatOpen) {
+              markChatRead(currentRoomId, 'customer').catch(() => {});
+            }
+          }
+
+          return res.messages;
+        });
+
+        // Compute unread count when chat is closed
+        if (!isChatOpen) {
+          const unread = res.messages.filter(
+            (m) => m.sender_role === 'admin' && !m.is_read
+          ).length;
+          setUnreadCount(unread);
+        } else {
+          setUnreadCount(0);
+          markChatRead(currentRoomId, 'customer').catch(() => {});
+        }
+      } catch (e) {
+        // Ignore polling error silently
+      }
+    };
+
+    fetchLatest();
+
+    // Fast polling (2.5s) when chat is open, slower polling (7s) when closed
+    const pollInterval = isChatOpen ? 2500 : 7000;
+    const timer = setInterval(fetchLatest, pollInterval);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [currentRoomId, isChatOpen]);
+
+  // Listen to live socket messages when connected
+  useEffect(() => {
+    if (!currentRoomId || !socket) return;
+
     const handleNewMessage = (msg) => {
-      // Only handle messages for this customer's room
       if (msg.room_id === currentRoomId) {
         setMessages((prev) => {
-          // Strictly prevent duplicate by id
           if (msg.id && prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
 
-        if (!isChatOpen && msg.sender_role === 'admin') {
-          setUnreadCount((c) => c + 1);
+        if (msg.sender_role === 'admin') {
+          playNotificationSound();
+          if (!isChatOpen) {
+            setUnreadCount((c) => c + 1);
+          } else {
+            markChatRead(currentRoomId, 'customer').catch(() => {});
+          }
         }
       }
     };
@@ -81,13 +157,13 @@ export function ChatProvider({ children }) {
   useEffect(() => {
     if (isChatOpen && currentRoomId) {
       setUnreadCount(0);
-      markChatRead(currentRoomId, 'customer').catch(console.error);
+      markChatRead(currentRoomId, 'customer').catch(() => {});
     }
   }, [isChatOpen, currentRoomId]);
 
-  // Customer send message: ALWAYS sends as role 'customer'
+  // Customer send message: ALWAYS sends via HTTP REST API with optimistic UI and socket broadcast
   const sendMessage = useCallback(
-    (text, imageUrl = null) => {
+    async (text, imageUrl = null) => {
       if (!text && !imageUrl) return;
       const roomId = currentRoomId || getCustomerRoom();
       const senderPhone = user?.phone || roomId;
@@ -102,21 +178,34 @@ export function ChatProvider({ children }) {
         image_url: imageUrl
       };
 
-      if (!socket.connected) {
-        sendChatMessage(payload)
-          .then((res) => {
-            if (res.success && res.message) {
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === res.message.id)) return prev;
-                return [...prev, res.message];
-              });
-            }
-          })
-          .catch(console.error);
-        return;
-      }
+      // Optimistic UI update
+      const tempId = 'temp_' + Date.now();
+      const optimisticMsg = {
+        id: tempId,
+        ...payload,
+        created_at: new Date().toISOString()
+      };
 
-      socket.emit('chat_message', payload);
+      setMessages((prev) => [...prev, optimisticMsg]);
+
+      try {
+        // 1. Guaranteed HTTP API call to Supabase PostgreSQL
+        const res = await sendChatMessage(payload);
+        if (res.success && res.message) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempId ? res.message : m))
+          );
+        }
+
+        // 2. Also emit to socket if connected
+        if (socket?.connected) {
+          socket.emit('chat_message', payload);
+        }
+      } catch (err) {
+        console.error('Lỗi gửi tin nhắn:', err);
+        // Rollback optimistic message if failed
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      }
     },
     [currentRoomId, user, socket, getCustomerRoom]
   );
@@ -124,7 +213,7 @@ export function ChatProvider({ children }) {
   const sendTyping = useCallback(
     (typing) => {
       const roomId = currentRoomId || getCustomerRoom();
-      if (!roomId) return;
+      if (!roomId || !socket?.connected) return;
       socket.emit('typing', {
         room_id: roomId,
         sender_role: 'customer',

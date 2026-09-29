@@ -12,27 +12,38 @@ router.get('/rooms', async (req, res) => {
     const { data: messages, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .order('id', { ascending: false });
+      .order('id', { ascending: false })
+      .limit(500);
 
     if (error) {
       return res.status(500).json({ error: error.message });
     }
 
+    // Try to enrich with registered user names
+    const userMap = new Map();
+    try {
+      const { data: users } = await supabase.from('users').select('phone, name');
+      for (const u of (users || [])) {
+        if (u.phone && u.name) userMap.set(u.phone, u.name);
+      }
+    } catch (e) {}
+
     const roomsMap = new Map();
     for (const msg of (messages || [])) {
       if (!roomsMap.has(msg.room_id)) {
+        const foundName = userMap.get(msg.room_id) || (msg.sender_role === 'customer' ? msg.sender_name : null);
         roomsMap.set(msg.room_id, {
           room_id: msg.room_id,
           last_activity: msg.created_at,
           last_message: msg.message,
           last_sender_role: msg.sender_role,
-          customer_name: msg.sender_role === 'customer' ? msg.sender_name : null,
+          customer_name: foundName,
           unread_count: 0
         });
       }
       const room = roomsMap.get(msg.room_id);
       if (!room.customer_name && msg.sender_role === 'customer') {
-        room.customer_name = msg.sender_name;
+        room.customer_name = userMap.get(msg.room_id) || msg.sender_name;
       }
       if (msg.is_read === false && msg.sender_role === 'customer') {
         room.unread_count++;
@@ -59,7 +70,7 @@ router.get('/:roomId', async (req, res) => {
       .select('*')
       .eq('room_id', roomId)
       .order('id', { ascending: true })
-      .limit(100);
+      .limit(200);
 
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -84,16 +95,19 @@ router.post('/', async (req, res) => {
       return res.status(500).json({ error: 'Database service unavailable' });
     }
 
+    const role = sender_role || 'customer';
+    const defaultName = role === 'admin' ? 'Bếp Việt (Chủ Quán)' : 'Khách hàng';
+
     const { data: newMsg, error } = await supabase
       .from('chat_messages')
       .insert({
         room_id,
-        sender_role: sender_role || 'customer',
-        sender_phone: sender_phone || room_id,
-        sender_name: sender_name || (sender_role === 'admin' ? 'Bếp Việt' : 'Khách hàng'),
+        sender_role: role,
+        sender_phone: sender_phone || (role === 'admin' ? '0909999999' : room_id),
+        sender_name: sender_name || defaultName,
         message: message.trim(),
         image_url: image_url || null,
-        is_read: sender_role === 'admin' ? true : false
+        is_read: false
       })
       .select()
       .single();
