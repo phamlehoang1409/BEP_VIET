@@ -20,6 +20,80 @@ function generateOrderCode() {
   return `ORD-${dateStr}-${randomStr}`;
 }
 
+// Tính thời điểm 00:00:00 hôm nay theo giờ Việt Nam (UTC+7)
+function getStartOfTodayVietnamISO() {
+  const now = new Date();
+  const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const year = vnTime.getUTCFullYear();
+  const month = vnTime.getUTCMonth();
+  const date = vnTime.getUTCDate();
+
+  // 00:00:00 của ngày hôm nay theo giờ VN quy đổi về UTC ISO
+  const startOfVnDayInUtc = new Date(Date.UTC(year, month, date, 0, 0, 0) - 7 * 60 * 60 * 1000);
+  return startOfVnDayInUtc.toISOString();
+}
+
+// Tự động xóa các đơn hàng trong ngày đã hoàn thành hoặc hủy khi sang ngày hôm sau
+async function autoCleanupOldCompletedOrders() {
+  if (!supabase) return { deletedCount: 0 };
+  try {
+    const startOfTodayISO = getStartOfTodayVietnamISO();
+
+    // Lấy tất cả các đơn hàng có trạng thái completed hoặc cancelled được tạo TRƯỚC ngày hôm nay
+    const { data: oldOrders, error: findErr } = await supabase
+      .from('orders')
+      .select('id, order_code, status, created_at')
+      .in('status', ['completed', 'cancelled'])
+      .lt('created_at', startOfTodayISO);
+
+    if (findErr) {
+      console.error('[Auto Cleanup Orders] Lỗi tìm đơn hàng cũ:', findErr.message);
+      return { deletedCount: 0, error: findErr.message };
+    }
+
+    if (!oldOrders || oldOrders.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    const oldIds = oldOrders.map((o) => o.id);
+
+    // 1. Xóa chi tiết các món trong order_items trước để tránh lỗi khóa ngoại
+    await supabase
+      .from('order_items')
+      .delete()
+      .in('order_id', oldIds);
+
+    // 2. Xóa đơn hàng trong bảng orders của Supabase
+    const { error: delErr } = await supabase
+      .from('orders')
+      .delete()
+      .in('id', oldIds);
+
+    if (delErr) {
+      console.error('[Auto Cleanup Orders] Lỗi khi xóa đơn hàng khỏi Supabase:', delErr.message);
+      return { deletedCount: 0, error: delErr.message };
+    }
+
+    console.log(
+      `[Auto Cleanup Orders] 🧹 Đã tự động xóa sạch ${oldOrders.length} đơn hàng hoàn thành/hủy từ ngày hôm trước khỏi Supabase:`,
+      oldOrders.map((o) => o.order_code).join(', ')
+    );
+
+    return { deletedCount: oldOrders.length, deletedOrders: oldOrders };
+  } catch (err) {
+    console.error('[Auto Cleanup Orders] Ngoại lệ khi dọn dẹp đơn cũ:', err.message);
+    return { deletedCount: 0, error: err.message };
+  }
+}
+
+// Chạy định kỳ mỗi 15 phút
+setInterval(() => {
+  autoCleanupOldCompletedOrders().catch(() => {});
+}, 15 * 60 * 1000);
+
+// Chạy dọn dẹp ngay khi khởi động
+autoCleanupOldCompletedOrders().catch(() => {});
+
 // Place a new order
 router.post('/', async (req, res) => {
   try {
@@ -281,6 +355,9 @@ router.get('/', async (req, res) => {
       return res.json({ success: true, orders: [] });
     }
 
+    // Tự động dọn dẹp các đơn đã hoàn thành/hủy từ ngày hôm trước khỏi Supabase
+    await autoCleanupOldCompletedOrders();
+
     let q = supabase.from('orders').select('*, order_items(*)');
 
     if (status && status !== 'all' && status !== 'undefined' && status !== 'null') {
@@ -541,6 +618,21 @@ router.patch('/:id/cancel', async (req, res) => {
       success: true,
       message: 'Đã hủy đơn hàng thành công!',
       order: orderFormatted
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/orders/cleanup-old - Chủ động dọn dẹp các đơn hàng cũ đã hoàn thành/hủy từ ngày hôm trước
+router.post('/cleanup-old', async (req, res) => {
+  try {
+    const result = await autoCleanupOldCompletedOrders();
+    return res.json({
+      success: true,
+      message: `Đã dọn dẹp thành công! Đã xóa ${result.deletedCount} đơn hàng cũ đã hoàn thành/hủy khỏi Supabase.`,
+      deletedCount: result.deletedCount,
+      deletedOrders: result.deletedOrders || []
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });

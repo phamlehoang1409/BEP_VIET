@@ -243,6 +243,11 @@ export const updateOrderDeliveryFee = (id, delivery_fee) =>
     body: JSON.stringify({ delivery_fee })
   });
 
+export const cleanupOldOrders = () =>
+  request('/orders/cleanup-old', {
+    method: 'POST'
+  });
+
 // --- Store Settings API ---
 export const getStoreSettings = () => request('/settings');
 

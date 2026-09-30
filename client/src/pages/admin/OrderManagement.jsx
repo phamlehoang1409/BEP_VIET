@@ -17,13 +17,15 @@ import {
   Edit2,
   Settings,
   X,
-  Save
+  Save,
+  Trash2
 } from 'lucide-react';
 import {
   getAllOrders,
   updateOrderStatus,
   confirmOrder,
   updateOrderDeliveryFee,
+  cleanupOldOrders,
   getSocket
 } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
@@ -149,6 +151,22 @@ export default function OrderManagement() {
     }
   };
 
+  const handleManualCleanup = async () => {
+    try {
+      const res = await cleanupOldOrders();
+      if (res.success) {
+        if (res.deletedCount > 0) {
+          showToast(`🧹 Đã dọn dẹp ${res.deletedCount} đơn hàng cũ đã hoàn thành/hủy khỏi Supabase!`, 'success');
+          fetchOrders();
+        } else {
+          showToast('Hệ thống cơ sở dữ liệu đã sạch sẽ, không có đơn hàng cũ qua ngày cần xóa!', 'info');
+        }
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi dọn dẹp đơn cũ', 'error');
+    }
+  };
+
   const pendingCount = orders.filter((o) => o.status === 'pending').length;
 
   return (
@@ -169,7 +187,7 @@ export default function OrderManagement() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
           {/* Quick Ship & Store Hours Button */}
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -177,6 +195,17 @@ export default function OrderManagement() {
           >
             <Truck className="w-3.5 h-3.5" />
             <span>Chỉnh Phí Ship Quán</span>
+          </button>
+
+          {/* Manual Auto-Cleanup Trigger */}
+          <button
+            onClick={handleManualCleanup}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition border border-rose-500/30"
+            title="Tự động xóa các đơn hoàn thành hoặc hủy của ngày hôm trước khỏi Supabase"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+            <span className="hidden sm:inline">Dọn Đơn Cũ (Tự động)</span>
+            <span className="sm:hidden">Dọn Cũ</span>
           </button>
 
           <button
