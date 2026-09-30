@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getReviews, toggleReviewVisibility, deleteReview } from '../../api';
 import { useToast } from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function ReviewManagement() {
   const [reviews, setReviews] = useState([]);
@@ -20,6 +21,7 @@ export default function ReviewManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [starFilter, setStarFilter] = useState('all'); // 'all', '5', '4', '3', '2', '1', 'hidden'
   const [deletingId, setDeletingId] = useState(null);
+  const [reviewToDelete, setReviewToDelete] = useState(null);
   const { showToast } = useToast();
 
   const fetchReviews = async () => {
@@ -50,16 +52,15 @@ export default function ReviewManagement() {
     }
   };
 
-  const handleDelete = async (id, customerName) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN đánh giá của khách hàng "${customerName || 'này'}" không? Thao tác này không thể hoàn tác.`)) {
-      return;
-    }
-    setDeletingId(id);
+  const handleConfirmDelete = async () => {
+    if (!reviewToDelete) return;
+    setDeletingId(reviewToDelete.id);
     try {
-      const res = await deleteReview(id);
+      const res = await deleteReview(reviewToDelete.id);
       if (res.success) {
         setReviews(res.reviews);
         showToast('Đã xóa vĩnh viễn đánh giá thành công!', 'success');
+        setReviewToDelete(null);
       }
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa đánh giá', 'error');
@@ -370,12 +371,11 @@ export default function ReviewManagement() {
 
                   {/* Delete Button */}
                   <button
-                    onClick={() => handleDelete(r.id, r.customer_name)}
-                    disabled={deletingId === r.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-bold transition disabled:opacity-50"
+                    onClick={() => setReviewToDelete({ id: r.id, customerName: r.customer_name })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs font-bold transition active:scale-95"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>{deletingId === r.id ? 'Đang xóa...' : 'Xóa Bỏ'}</span>
+                    <span>Xóa Bỏ</span>
                   </button>
                 </div>
               </div>
@@ -383,6 +383,19 @@ export default function ReviewManagement() {
           ))}
         </div>
       )}
+
+      {/* Confirm Delete Review Modal */}
+      <ConfirmModal
+        isOpen={!!reviewToDelete}
+        title="Xác Nhận Xóa Đánh Giá?"
+        message={`Bạn có chắc chắn muốn XÓA VĨNH VIỄN đánh giá của khách hàng "${reviewToDelete?.customerName || 'này'}" không? Thao tác này không thể hoàn tác.`}
+        confirmText="Xóa Vĩnh Viễn"
+        cancelText="Hủy Bỏ"
+        confirmType="danger"
+        loading={!!deletingId}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setReviewToDelete(null)}
+      />
     </div>
   );
 }

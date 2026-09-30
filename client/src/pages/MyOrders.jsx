@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { formatVND } from '../utils/vietnamData';
 import { useToast } from '../components/Toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function MyOrders() {
   const { user, setIsAuthModalOpen } = useAuth();
@@ -18,6 +19,8 @@ export default function MyOrders() {
   const [comment, setComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   const { showToast } = useToast();
 
   const fetchOrders = async (phone) => {
@@ -33,18 +36,22 @@ export default function MyOrders() {
     }
   };
 
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+  const handleConfirmCancelOrder = async () => {
+    if (!cancellingOrderId) return;
+    setCancelling(true);
     try {
-      const res = await cancelOrder(orderId);
+      const res = await cancelOrder(cancellingOrderId);
       if (res.success) {
         setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o))
+          prev.map((o) => (o.id === cancellingOrderId ? { ...o, status: 'cancelled' } : o))
         );
         showToast('Đã hủy đơn hàng thành công!', 'success');
+        setCancellingOrderId(null);
       }
     } catch (err) {
       showToast(err.message || 'Không thể hủy đơn hàng', 'error');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -247,8 +254,8 @@ export default function MyOrders() {
                 <div className="flex items-center gap-2">
                   {(order.status === 'pending' || order.status === 'confirmed') && (
                     <button
-                      onClick={() => handleCancelOrder(order.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition"
+                      onClick={() => setCancellingOrderId(order.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition active:scale-95"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Hủy đơn</span>
@@ -372,6 +379,19 @@ export default function MyOrders() {
           </div>
         </div>
       )}
+
+      {/* Confirm Cancel Modal */}
+      <ConfirmModal
+        isOpen={!!cancellingOrderId}
+        title="Xác Nhận Hủy Đơn Hàng?"
+        message="Quý khách có chắc chắn muốn hủy đơn hàng này không? Sau khi hủy, quán sẽ dừng chế biến món ăn này và không thể khôi phục lại đơn."
+        confirmText="Đồng Ý Hủy"
+        cancelText="Giữ Lại Đơn"
+        confirmType="danger"
+        loading={cancelling}
+        onConfirm={handleConfirmCancelOrder}
+        onCancel={() => setCancellingOrderId(null)}
+      />
     </div>
   );
 }

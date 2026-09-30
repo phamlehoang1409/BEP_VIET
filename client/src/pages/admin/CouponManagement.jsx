@@ -16,6 +16,7 @@ import {
 import { getCoupons, createCoupon, deleteCoupon } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 export default function CouponManagement() {
   const { showToast } = useToast();
@@ -24,6 +25,8 @@ export default function CouponManagement() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingCoupon, setDeletingCoupon] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form states
   const [code, setCode] = useState('');
@@ -103,14 +106,18 @@ export default function CouponManagement() {
     }
   };
 
-  const handleDelete = async (couponCode) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa mã giảm giá "${couponCode}"?`)) return;
+  const handleConfirmDelete = async () => {
+    if (!deletingCoupon) return;
+    setIsDeleting(true);
     try {
-      await deleteCoupon(couponCode);
-      showToast(`Đã xóa mã "${couponCode}"!`, 'success');
+      await deleteCoupon(deletingCoupon);
+      showToast(`Đã xóa mã "${deletingCoupon}"!`, 'success');
+      setDeletingCoupon(null);
       fetchCoupons();
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa mã', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -217,8 +224,8 @@ export default function CouponManagement() {
                   </div>
 
                   <button
-                    onClick={() => handleDelete(coupon.code)}
-                    className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 flex items-center justify-center transition"
+                    onClick={() => setDeletingCoupon(coupon.code)}
+                    className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 flex items-center justify-center transition active:scale-95"
                     title="Xóa mã này"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -396,6 +403,19 @@ export default function CouponManagement() {
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Coupon Modal */}
+      <ConfirmModal
+        isOpen={!!deletingCoupon}
+        title="Xác Nhận Xóa Mã Giảm Giá?"
+        message={`Bạn có chắc chắn muốn xóa vĩnh viễn mã giảm giá "${deletingCoupon}" khỏi hệ thống không?`}
+        confirmText="Xóa Mã"
+        cancelText="Hủy Bỏ"
+        confirmType="danger"
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingCoupon(null)}
+      />
     </div>
   );
 }

@@ -35,13 +35,9 @@ export default function PwaInstallBanner() {
       if (choiceResult.outcome === 'accepted') {
         setShowBanner(false);
       }
-      setDeferredPrompt(null);
     } else {
-      alert(
-        '💡 Cách cài đặt app trên điện thoại:\n\n' +
-        '• Safari (iOS): Bấm nút Chia sẻ (biểu tượng mũi tên lên) -> Chọn "Thêm vào MH chính" (Add to Home Screen).\n' +
-        '• Chrome (Android): Bấm menu 3 chấm góc phải -> Chọn "Cài đặt ứng dụng" hoặc "Thêm vào màn hình chính".'
-      );
+      // Do nothing or user instruction
+      setShowBanner(false);
     }
   };
 

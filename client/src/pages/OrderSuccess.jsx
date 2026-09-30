@@ -23,6 +23,7 @@ import { formatVND } from '../utils/vietnamData';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function OrderSuccess() {
   const { id } = useParams();
@@ -32,6 +33,7 @@ export default function OrderSuccess() {
   
   const { showToast } = useToast();
   const [cancelling, setCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
@@ -51,15 +53,15 @@ export default function OrderSuccess() {
     }
   };
 
-  const handleCancelOrder = async () => {
+  const handleConfirmCancelOrder = async () => {
     if (!order || cancelling) return;
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
     setCancelling(true);
     try {
       const res = await cancelOrder(order.id);
       if (res.success) {
         setOrder((prev) => ({ ...prev, status: 'cancelled' }));
         showToast('Đã hủy đơn hàng thành công!', 'success');
+        setShowCancelModal(false);
       }
     } catch (err) {
       showToast(err.message || 'Không thể hủy đơn hàng', 'error');
@@ -478,7 +480,7 @@ export default function OrderSuccess() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {(order?.status === 'pending' || order?.status === 'confirmed') && (
           <button
-            onClick={handleCancelOrder}
+            onClick={() => setShowCancelModal(true)}
             disabled={cancelling}
             className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm border border-rose-200 transition shadow-sm active:scale-95 disabled:opacity-50"
           >
@@ -517,6 +519,19 @@ export default function OrderSuccess() {
           <ArrowRight className="w-4 h-4 text-slate-600" />
         </Link>
       </div>
+
+      {/* Luxury Confirm Cancel Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        title="Xác Nhận Hủy Đơn Hàng?"
+        message="Quý khách có chắc chắn muốn hủy đơn hàng này không? Sau khi hủy, quán sẽ dừng chế biến món ăn này."
+        confirmText="Đồng Ý Hủy Đơn"
+        cancelText="Giữ Lại Đơn"
+        confirmType="danger"
+        loading={cancelling}
+        onConfirm={handleConfirmCancelOrder}
+        onCancel={() => setShowCancelModal(false)}
+      />
     </div>
   );
 }

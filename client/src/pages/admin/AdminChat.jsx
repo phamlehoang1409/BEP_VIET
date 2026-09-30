@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { getChatRooms, getChatMessages, markChatRead, sendChatMessage, clearChatRoom, clearAllChats, getSocket } from '../../api';
 import { useToast } from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const ADMIN_QUICK_TEMPLATES = [
   'Dạ chào bạn! Bếp Việt có thể giúp gì cho bạn ạ?',
@@ -34,6 +35,8 @@ export default function AdminChat() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [searchPhone, setSearchPhone] = useState('');
+  const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [clearingChat, setClearingChat] = useState(false);
 
   const messagesEndRef = useRef(null);
   const activeRoomRef = useRef(activeRoomId);
@@ -228,23 +231,22 @@ function playChatNotificationSound() {
   }, [messages]);
 
   // End chat and clear all messages from Supabase
-  const handleEndChat = async () => {
+  const handleConfirmEndChat = async () => {
     if (!activeRoomId) return;
-    const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn KẾT THÚC cuộc trò chuyện với khách ${activeRoomId}?\nToàn bộ dữ liệu tin nhắn trong Supabase sẽ bị XÓA SẠCH đồng thời.`
-    );
-    if (!confirmed) return;
-
+    setClearingChat(true);
     try {
       const res = await clearChatRoom(activeRoomId);
       if (res.success) {
         showToast('Đã kết thúc cuộc trò chuyện và xóa toàn bộ tin nhắn trong Supabase!', 'success');
         setMessages([]);
         setActiveRoomId('');
+        setShowEndChatModal(false);
         fetchRooms(false);
       }
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa tin nhắn', 'error');
+    } finally {
+      setClearingChat(false);
     }
   };
 
@@ -440,7 +442,7 @@ function playChatNotificationSound() {
 
                 {/* Nút Kết Thúc & Xóa Toàn Bộ Tin Nhắn trong Supabase */}
                 <button
-                  onClick={handleEndChat}
+                  onClick={() => setShowEndChatModal(true)}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 text-xs font-bold transition border border-rose-500/30 shadow-sm active:scale-95"
                   title="Kết thúc trò chuyện và xóa toàn bộ tin nhắn khỏi Supabase"
                 >
@@ -544,6 +546,19 @@ function playChatNotificationSound() {
           )}
         </div>
       </div>
+
+      {/* Confirm End Chat & Clear DB Modal */}
+      <ConfirmModal
+        isOpen={showEndChatModal}
+        title="Xóa Dữ Liệu Cuộc Trò Chuyện?"
+        message={`Bạn có chắc chắn muốn KẾT THÚC cuộc trò chuyện với khách hàng "${activeRoomId}" không? Toàn bộ dữ liệu tin nhắn sẽ bị XÓA SẠCH vĩnh viễn khỏi cơ sở dữ liệu Supabase.`}
+        confirmText="Kết Thúc & Xóa"
+        cancelText="Quay Lại"
+        confirmType="danger"
+        loading={clearingChat}
+        onConfirm={handleConfirmEndChat}
+        onCancel={() => setShowEndChatModal(false)}
+      />
     </div>
   );
 }

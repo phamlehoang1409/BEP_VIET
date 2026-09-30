@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, User, Store, Lock, ArrowRight, ShieldCheck, Tra
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
+import ConfirmModal from './ConfirmModal';
 
 export default function LiveChatWidget() {
   const {
@@ -19,6 +20,8 @@ export default function LiveChatWidget() {
   const { user, setIsAuthModalOpen } = useAuth();
   const { showToast } = useToast();
   const [inputText, setInputText] = useState('');
+  const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [endingChat, setEndingChat] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Auto scroll to bottom of messages
@@ -60,15 +63,16 @@ export default function LiveChatWidget() {
     sendTyping(e.target.value.length > 0);
   };
 
-  const handleEndChat = async () => {
-    if (messages.length === 0) return;
-    if (window.confirm('Quý khách có chắc chắn muốn KẾT THÚC cuộc trò chuyện và XÓA TOÀN BỘ tin nhắn khỏi hệ thống không?')) {
-      try {
-        await clearCurrentChat();
-        showToast('Đã kết thúc cuộc trò chuyện và xóa toàn bộ tin nhắn khỏi Supabase!', 'success');
-      } catch (e) {
-        showToast('Không thể xóa tin nhắn', 'error');
-      }
+  const handleConfirmEndChat = async () => {
+    setEndingChat(true);
+    try {
+      await clearCurrentChat();
+      showToast('Đã kết thúc cuộc trò chuyện và xóa toàn bộ tin nhắn khỏi Supabase!', 'success');
+      setShowEndChatModal(false);
+    } catch (e) {
+      showToast('Không thể xóa tin nhắn', 'error');
+    } finally {
+      setEndingChat(false);
     }
   };
 
@@ -120,9 +124,9 @@ export default function LiveChatWidget() {
             <div className="flex items-center gap-1.5">
               {messages.length > 0 && (
                 <button
-                  onClick={handleEndChat}
+                  onClick={() => setShowEndChatModal(true)}
                   title="Kết thúc & Xóa sạch tin nhắn"
-                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center transition border border-slate-700/60"
+                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center transition border border-slate-700/60 active:scale-95"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -261,6 +265,19 @@ export default function LiveChatWidget() {
           )}
         </div>
       )}
+
+      {/* Confirm End Chat Modal */}
+      <ConfirmModal
+        isOpen={showEndChatModal}
+        title="Kết Thúc Cuộc Trò Chuyện?"
+        message="Quý khách có chắc chắn muốn kết thúc trò chuyện và xóa toàn bộ dữ liệu tin nhắn khỏi hệ thống không?"
+        confirmText="Kết Thúc & Xóa"
+        cancelText="Tiếp Tục Chat"
+        confirmType="danger"
+        loading={endingChat}
+        onConfirm={handleConfirmEndChat}
+        onCancel={() => setShowEndChatModal(false)}
+      />
     </>
   );
 }

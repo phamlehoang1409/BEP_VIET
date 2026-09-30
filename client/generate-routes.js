@@ -12,6 +12,15 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
   // Generate 404.html
   fs.writeFileSync(path.join(distDir, '404.html'), indexHtml);
 
+  // Generate vercel.json in distDir for SPA rewrites
+  const vercelConfig = {
+    cleanUrls: true,
+    rewrites: [
+      { source: '/(.*)', destination: '/index.html' }
+    ]
+  };
+  fs.writeFileSync(path.join(distDir, 'vercel.json'), JSON.stringify(vercelConfig, null, 2));
+
   // Generate static entrypoint for every client route
   const routes = [
     'admin',
