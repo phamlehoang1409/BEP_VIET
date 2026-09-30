@@ -314,10 +314,21 @@ export const markChatRead = (roomId, reader_role) =>
     body: JSON.stringify({ reader_role })
   });
 
+export const clearChatRoom = (roomId) =>
+  request(`/chat/${roomId}`, {
+    method: 'DELETE'
+  });
+
+export const clearAllChats = () =>
+  request('/chat', {
+    method: 'DELETE'
+  });
+
 // --- Dashboard Stats API ---
 export const getDashboardStats = () => request('/stats/summary');
 
 // --- Reviews API ---
 export const getReviews = () => request('/reviews');
+export const checkOrderReviewed = (orderId) => request(`/reviews/check/${orderId}`);
 export const submitReview = (data) => request('/reviews', { method: 'POST', body: JSON.stringify(data) });
 export const toggleReviewVisibility = (id) => request(`/reviews/${id}/toggle`, { method: 'PATCH' });

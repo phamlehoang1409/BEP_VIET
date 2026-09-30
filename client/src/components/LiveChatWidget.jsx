@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, User, Store, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { MessageSquare, X, Send, User, Store, Lock, ArrowRight, ShieldCheck, Trash2 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
@@ -13,7 +13,8 @@ export default function LiveChatWidget() {
     isTyping,
     currentRoomId,
     sendMessage,
-    sendTyping
+    sendTyping,
+    clearCurrentChat
   } = useChat();
   const { user, setIsAuthModalOpen } = useAuth();
   const { showToast } = useToast();
@@ -57,6 +58,18 @@ export default function LiveChatWidget() {
   const handleInputChange = (e) => {
     setInputText(e.target.value);
     sendTyping(e.target.value.length > 0);
+  };
+
+  const handleEndChat = async () => {
+    if (messages.length === 0) return;
+    if (window.confirm('Quý khách có chắc chắn muốn KẾT THÚC cuộc trò chuyện và XÓA TOÀN BỘ tin nhắn khỏi hệ thống không?')) {
+      try {
+        await clearCurrentChat();
+        showToast('Đã kết thúc cuộc trò chuyện và xóa toàn bộ tin nhắn khỏi Supabase!', 'success');
+      } catch (e) {
+        showToast('Không thể xóa tin nhắn', 'error');
+      }
+    }
   };
 
   return (
@@ -104,12 +117,23 @@ export default function LiveChatWidget() {
               </div>
             </div>
 
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition border border-slate-700/60"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              {messages.length > 0 && (
+                <button
+                  onClick={handleEndChat}
+                  title="Kết thúc & Xóa sạch tin nhắn"
+                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center transition border border-slate-700/60"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition border border-slate-700/60"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Current User Session Bar or Login Required Gate */}

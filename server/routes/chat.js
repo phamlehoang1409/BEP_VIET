@@ -156,4 +156,71 @@ router.patch('/:roomId/read', async (req, res) => {
   }
 });
 
+// DELETE /api/chat/:roomId - Khi chat xong với khách, xóa sạch toàn bộ tin nhắn của khách trong Supabase
+router.delete('/:roomId', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    if (!roomId) {
+      return res.status(400).json({ error: 'Thiếu mã phòng chat' });
+    }
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database service unavailable' });
+    }
+
+    // Xóa toàn bộ tin nhắn liên quan tới roomId này trong bảng chat_messages của Supabase
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('room_id', roomId);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Phát socket thông báo cho cả Admin và Khách hàng xóa trắng màn hình chat ngay lập tức
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${roomId}`).to('admin_room').emit('chat_cleared', { room_id: roomId });
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã kết thúc cuộc trò chuyện và xóa toàn bộ dữ liệu tin nhắn của phòng ${roomId} khỏi Supabase!`
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/chat - Xóa toàn bộ lịch sử tin nhắn của tất cả khách hàng trong Supabase
+router.delete('/', async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database service unavailable' });
+    }
+
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .neq('id', 0);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('all_chats_cleared');
+    }
+
+    return res.json({
+      success: true,
+      message: 'Đã xóa sạch toàn bộ lịch sử tin nhắn trong Supabase thành công!'
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

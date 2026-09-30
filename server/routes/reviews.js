@@ -22,7 +22,30 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST a new review
+// GET check if an order has been reviewed
+router.get('/check/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    let reviews = [];
+    if (supabase) {
+      const { data } = await supabase
+        .from('users')
+        .select('name')
+        .eq('phone', REVIEWS_ROW_PHONE)
+        .eq('role', 'store_reviews')
+        .maybeSingle();
+      if (data && data.name) reviews = JSON.parse(data.name);
+    }
+    const isReviewed = reviews.some(
+      (r) => String(r.order_id).trim() === String(orderId).trim()
+    );
+    return res.json({ success: true, is_reviewed: isReviewed });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// POST a new review (Chỉ cho phép đánh giá 1 lần duy nhất)
 router.post('/', async (req, res) => {
   try {
     const { order_id, customer_name, customer_phone, rating, comment } = req.body;
@@ -37,6 +60,18 @@ router.post('/', async (req, res) => {
         .eq('role', 'store_reviews')
         .maybeSingle();
       if (data && data.name) reviews = JSON.parse(data.name);
+    }
+
+    // Kiểm tra xem đơn hàng này đã được đánh giá chưa (chỉ cho phép 1 lần duy nhất)
+    if (order_id) {
+      const alreadyReviewed = reviews.some(
+        (r) => String(r.order_id).trim() === String(order_id).trim()
+      );
+      if (alreadyReviewed) {
+        return res.status(400).json({
+          error: 'Đơn hàng này đã được đánh giá rồi! Mỗi đơn hàng chỉ được gửi đánh giá 1 lần duy nhất.'
+        });
+      }
     }
 
     const newReview = {
@@ -60,7 +95,7 @@ router.post('/', async (req, res) => {
       }, { onConflict: 'phone' });
     }
 
-    return res.json({ success: true, review: newReview });
+    return res.json({ success: true, review: newReview, message: 'Cảm ơn Quý khách đã gửi đánh giá!' });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getSocket, getChatMessages, markChatRead, sendChatMessage } from '../api';
+import { getSocket, getChatMessages, markChatRead, sendChatMessage, clearChatRoom } from '../api';
 import { useAuth } from './AuthContext';
 
 const ChatContext = createContext();
@@ -144,12 +144,28 @@ export function ChatProvider({ children }) {
       }
     };
 
+    const handleChatCleared = (data) => {
+      if (data.room_id === currentRoomId) {
+        setMessages([]);
+        setUnreadCount(0);
+      }
+    };
+
+    const handleAllChatsCleared = () => {
+      setMessages([]);
+      setUnreadCount(0);
+    };
+
     socket.on('new_message', handleNewMessage);
     socket.on('typing_status', handleTypingStatus);
+    socket.on('chat_cleared', handleChatCleared);
+    socket.on('all_chats_cleared', handleAllChatsCleared);
 
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('typing_status', handleTypingStatus);
+      socket.off('chat_cleared', handleChatCleared);
+      socket.off('all_chats_cleared', handleAllChatsCleared);
     };
   }, [currentRoomId, isChatOpen, socket]);
 
@@ -223,6 +239,20 @@ export function ChatProvider({ children }) {
     [currentRoomId, socket, getCustomerRoom]
   );
 
+  const clearCurrentChat = useCallback(async () => {
+    const roomId = currentRoomId || getCustomerRoom();
+    if (!roomId) return;
+    try {
+      await clearChatRoom(roomId);
+      setMessages([]);
+      setUnreadCount(0);
+      return { success: true };
+    } catch (err) {
+      console.error('Lỗi xóa tin nhắn:', err);
+      throw err;
+    }
+  }, [currentRoomId, getCustomerRoom]);
+
   return (
     <ChatContext.Provider
       value={{
@@ -235,7 +265,8 @@ export function ChatProvider({ children }) {
         currentRoomId,
         setCurrentRoomId,
         sendMessage,
-        sendTyping
+        sendTyping,
+        clearCurrentChat
       }}
     >
       {children}

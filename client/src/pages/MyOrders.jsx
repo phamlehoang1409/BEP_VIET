@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star } from 'lucide-react';
-import { getCustomerOrders, getSocket, cancelOrder, submitReview } from '../api';
+import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star, CheckCircle2 } from 'lucide-react';
+import { getCustomerOrders, getSocket, cancelOrder, submitReview, getReviews } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { formatVND } from '../utils/vietnamData';
@@ -16,6 +16,8 @@ export default function MyOrders() {
   const [reviewingOrder, setReviewingOrder] = useState(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
   const { showToast } = useToast();
 
   const fetchOrders = async (phone) => {
@@ -64,6 +66,21 @@ export default function MyOrders() {
 
     socket.on('order_status_updated', handleStatusUpdate);
     return () => socket.off('order_status_updated', handleStatusUpdate);
+  }, []);
+
+  // Fetch already reviewed order IDs to ensure each order is reviewed at most once
+  useEffect(() => {
+    getReviews()
+      .then((res) => {
+        if (res.success && res.reviews) {
+          const ids = new Set();
+          res.reviews.forEach((r) => {
+            if (r.order_id) ids.add(String(r.order_id).trim());
+          });
+          setReviewedOrderIds(ids);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLookup = (e) => {
@@ -246,13 +263,20 @@ export default function MyOrders() {
                   </button>
 
                   {order.status === 'completed' && (
-                    <button
-                      onClick={() => { setReviewingOrder(order); setRating(5); setComment(''); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold transition"
-                    >
-                      <Star className="w-3.5 h-3.5 fill-current" />
-                      <span>Đánh giá</span>
-                    </button>
+                    reviewedOrderIds.has(String(order.order_code || '').trim()) || reviewedOrderIds.has(String(order.id || '').trim()) ? (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-300/80 text-xs font-bold select-none">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>Đã đánh giá</span>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => { setReviewingOrder(order); setRating(5); setComment(''); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold transition"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <span>Đánh giá</span>
+                      </button>
+                    )
                   )}
 
                   <Link
@@ -272,37 +296,78 @@ export default function MyOrders() {
 
       {/* Review Modal */}
       {reviewingOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
-            <h3 className="font-bold text-lg text-center text-slate-800">Đánh giá đơn hàng</h3>
-            <div className="flex justify-center gap-2">
-              {[1,2,3,4,5].map(star => (
-                <button key={star} onClick={() => setRating(star)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl animate-scale-up">
+            <div className="text-center space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                Đánh giá 1 lần duy nhất
+              </span>
+              <h3 className="font-black text-lg text-slate-900">Đánh Giá Món Ăn</h3>
+              <p className="text-xs text-slate-500">Mã đơn: {reviewingOrder.order_code}</p>
+            </div>
+
+            <div className="flex justify-center gap-2 py-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  type="button"
+                  key={star}
+                  onClick={() => setRating(star)}
+                  className="hover:scale-110 active:scale-95 transition"
+                >
                   <Star className={`w-8 h-8 ${rating >= star ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'}`} />
                 </button>
               ))}
             </div>
+
             <textarea
-              placeholder="Chia sẻ cảm nhận của bạn về món ăn..."
+              placeholder="Chia sẻ cảm nhận của Quý khách về chất lượng món mì & dịch vụ..."
               value={comment}
-              onChange={e => setComment(e.target.value)}
-              className="w-full p-3 rounded-xl border border-slate-200 text-sm h-24 outline-none focus:border-amber-400"
+              onChange={(e) => setComment(e.target.value)}
+              className="w-full p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 h-24 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
             />
+
             <div className="flex gap-2">
-              <button onClick={() => setReviewingOrder(null)} className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">Hủy</button>
-              <button onClick={async () => {
-                try {
-                  await submitReview({
-                    order_id: reviewingOrder.order_code,
-                    customer_name: reviewingOrder.customer_name,
-                    customer_phone: reviewingOrder.customer_phone,
-                    rating,
-                    comment
-                  });
-                  showToast('Cảm ơn bạn đã đánh giá!', 'success');
-                  setReviewingOrder(null);
-                } catch(e) { showToast('Lỗi', 'error'); }
-              }} className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white font-bold text-sm">Gửi</button>
+              <button
+                type="button"
+                onClick={() => setReviewingOrder(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={submittingReview}
+                onClick={async () => {
+                  setSubmittingReview(true);
+                  try {
+                    const orderCode = reviewingOrder.order_code || `ORD-${reviewingOrder.id}`;
+                    const res = await submitReview({
+                      order_id: orderCode,
+                      customer_name: reviewingOrder.customer_name,
+                      customer_phone: reviewingOrder.customer_phone,
+                      rating,
+                      comment
+                    });
+                    if (res.success) {
+                      showToast(res.message || 'Cảm ơn Quý khách đã gửi đánh giá món ăn!', 'success');
+                      setReviewedOrderIds((prev) => {
+                        const next = new Set(prev);
+                        if (reviewingOrder.order_code) next.add(String(reviewingOrder.order_code).trim());
+                        if (reviewingOrder.id) next.add(String(reviewingOrder.id).trim());
+                        return next;
+                      });
+                      setReviewingOrder(null);
+                    }
+                  } catch (e) {
+                    showToast(e.message || 'Không thể gửi đánh giá', 'error');
+                  } finally {
+                    setSubmittingReview(false);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-md transition disabled:opacity-50"
+              >
+                {submittingReview ? 'Đang gửi...' : 'Gửi Đánh Giá'}
+              </button>
             </div>
           </div>
         </div>

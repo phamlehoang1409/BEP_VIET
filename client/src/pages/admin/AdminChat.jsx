@@ -10,9 +10,10 @@ import {
   Search,
   CheckCheck,
   RefreshCw,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
-import { getChatRooms, getChatMessages, markChatRead, sendChatMessage, getSocket } from '../../api';
+import { getChatRooms, getChatMessages, markChatRead, sendChatMessage, clearChatRoom, clearAllChats, getSocket } from '../../api';
 import { useToast } from '../../components/Toast';
 
 const ADMIN_QUICK_TEMPLATES = [
@@ -199,14 +200,53 @@ function playChatNotificationSound() {
       fetchRooms(false);
     };
 
+    const handleChatCleared = (data) => {
+      if (data.room_id === activeRoomRef.current) {
+        setMessages([]);
+      }
+      fetchRooms(false);
+    };
+
+    const handleAllChatsCleared = () => {
+      setMessages([]);
+      fetchRooms(false);
+    };
+
     socket.on('new_message', handleNewMessage);
-    return () => socket.off('new_message', handleNewMessage);
+    socket.on('chat_cleared', handleChatCleared);
+    socket.on('all_chats_cleared', handleAllChatsCleared);
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('chat_cleared', handleChatCleared);
+      socket.off('all_chats_cleared', handleAllChatsCleared);
+    };
   }, [socket, showToast]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // End chat and clear all messages from Supabase
+  const handleEndChat = async () => {
+    if (!activeRoomId) return;
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn KẾT THÚC cuộc trò chuyện với khách ${activeRoomId}?\nToàn bộ dữ liệu tin nhắn trong Supabase sẽ bị XÓA SẠCH đồng thời.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await clearChatRoom(activeRoomId);
+      if (res.success) {
+        showToast('Đã kết thúc cuộc trò chuyện và xóa toàn bộ tin nhắn trong Supabase!', 'success');
+        setMessages([]);
+        setActiveRoomId('');
+        fetchRooms(false);
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi xóa tin nhắn', 'error');
+    }
+  };
 
   // Send admin message: ALWAYS via HTTP API with optimistic UI and socket broadcast
   const sendAdminMessage = async (text) => {
@@ -397,6 +437,17 @@ function playChatNotificationSound() {
                     </p>
                   </div>
                 </div>
+
+                {/* Nút Kết Thúc & Xóa Toàn Bộ Tin Nhắn trong Supabase */}
+                <button
+                  onClick={handleEndChat}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 text-xs font-bold transition border border-rose-500/30 shadow-sm active:scale-95"
+                  title="Kết thúc trò chuyện và xóa toàn bộ tin nhắn khỏi Supabase"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  <span className="hidden sm:inline">Kết Thúc & Xóa Tin Nhắn</span>
+                  <span className="sm:hidden">Xóa Chat</span>
+                </button>
               </div>
 
               {/* Messages Stream */}
