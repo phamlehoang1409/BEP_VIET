@@ -12,11 +12,23 @@ import {
   RotateCw,
   Zap,
   Sparkles,
-  Check
+  Check,
+  Truck,
+  Edit2,
+  Settings,
+  X,
+  Save
 } from 'lucide-react';
-import { getAllOrders, updateOrderStatus, confirmOrder, getSocket } from '../../api';
+import {
+  getAllOrders,
+  updateOrderStatus,
+  confirmOrder,
+  updateOrderDeliveryFee,
+  getSocket
+} from '../../api';
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
+import StoreSettingsModal from '../../components/StoreSettingsModal';
 
 export default function OrderManagement() {
   const navigate = useNavigate();
@@ -26,6 +38,14 @@ export default function OrderManagement() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
+
+  // Store Settings Modal trigger
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Edit Shipping Fee for single order modal
+  const [editingFeeOrder, setEditingFeeOrder] = useState(null);
+  const [customShippingFee, setCustomShippingFee] = useState('');
+  const [updatingFee, setUpdatingFee] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -102,6 +122,33 @@ export default function OrderManagement() {
     }
   };
 
+  const openEditFeeModal = (order) => {
+    setEditingFeeOrder(order);
+    setCustomShippingFee(order.delivery_fee !== undefined ? order.delivery_fee : 15000);
+  };
+
+  const handleSaveOrderFee = async (e) => {
+    e.preventDefault();
+    if (!editingFeeOrder) return;
+    const feeNum = Math.max(0, Number(customShippingFee) || 0);
+
+    setUpdatingFee(true);
+    try {
+      const res = await updateOrderDeliveryFee(editingFeeOrder.id, feeNum);
+      if (res.success && res.order) {
+        showToast(`Đã đổi phí ship đơn #${editingFeeOrder.order_code} thành ${formatVND(feeNum)}!`, 'success');
+        setOrders((prev) =>
+          prev.map((o) => (o.id === editingFeeOrder.id ? { ...o, ...res.order } : o))
+        );
+        setEditingFeeOrder(null);
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi sửa phí ship', 'error');
+    } finally {
+      setUpdatingFee(false);
+    }
+  };
+
   const pendingCount = orders.filter((o) => o.status === 'pending').length;
 
   return (
@@ -122,13 +169,24 @@ export default function OrderManagement() {
           </p>
         </div>
 
-        <button
-          onClick={fetchOrders}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700 self-start sm:self-auto"
-        >
-          <RotateCw className="w-3.5 h-3.5" />
-          <span>Làm Mới</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {/* Quick Ship & Store Hours Button */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition border border-amber-500/30"
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>Chỉnh Phí Ship Quán</span>
+          </button>
+
+          <button
+            onClick={fetchOrders}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            <span>Làm Mới</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -349,15 +407,33 @@ export default function OrderManagement() {
 
                 {/* Total & Action */}
                 <div className="pt-3 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-4 text-slate-400">
+                  <div className="flex flex-wrap items-center gap-3.5 text-slate-400">
                     <span>
                       Thanh toán: <strong className="text-white uppercase">{order.payment_method}</strong>
                     </span>
+
+                    {/* Adjustable Shipping Fee badge */}
+                    <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-700">
+                      <span>Phí ship:</span>
+                      <strong className="text-white font-mono">
+                        {order.delivery_fee === 0 ? 'Miễn phí' : formatVND(order.delivery_fee)}
+                      </strong>
+                      <button
+                        onClick={() => openEditFeeModal(order)}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 ml-1 flex items-center gap-0.5 underline font-bold"
+                        title="Điều chỉnh phí ship đơn này"
+                      >
+                        <Edit2 className="w-2.5 h-2.5" />
+                        <span>Sửa ship</span>
+                      </button>
+                    </div>
+
                     {order.discount > 0 && (
                       <span className="text-emerald-400">
                         Voucher: -{formatVND(order.discount)}
                       </span>
                     )}
+
                     <span>
                       Tổng tiền:{' '}
                       <strong className="text-amber-400 text-sm font-black">
@@ -394,6 +470,87 @@ export default function OrderManagement() {
           })}
         </div>
       )}
+
+      {/* MODAL: SỬA PHÍ SHIP RIÊNG CHO ĐƠN HÀNG */}
+      {editingFeeOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-amber-500/40 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up text-white">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-400" />
+                <h4 className="font-black text-sm text-white">Điều Chỉnh Phí Ship Đơn Hàng</h4>
+              </div>
+              <button
+                onClick={() => setEditingFeeOrder(null)}
+                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-300 space-y-1">
+              <p>Mã đơn: <strong className="text-amber-300 font-mono">{editingFeeOrder.order_code}</strong></p>
+              <p>Khách hàng: <strong className="text-white">{editingFeeOrder.customer_name}</strong> ({editingFeeOrder.customer_phone})</p>
+              <p>Tiền món (Tạm tính): <strong className="text-slate-200">{formatVND(editingFeeOrder.subtotal)}</strong></p>
+            </div>
+
+            <form onSubmit={handleSaveOrderFee} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase">
+                  Nhập Phí Vận Chuyển Mới (₫)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={customShippingFee}
+                  onChange={(e) => setCustomShippingFee(e.target.value)}
+                  placeholder="0 (Freeship) hoặc 10000, 20000..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-amber-300 font-mono font-black text-sm outline-none focus:border-amber-400"
+                  autoFocus
+                />
+                <div className="flex gap-2 mt-2">
+                  {[0, 10000, 15000, 20000, 25000].map((v) => (
+                    <button
+                      type="button"
+                      key={v}
+                      onClick={() => setCustomShippingFee(v)}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300 border border-slate-700"
+                    >
+                      {v === 0 ? 'Freeship' : `${v / 1000}k`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingFeeOrder(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingFee}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 text-xs font-black shadow-lg transition flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{updatingFee ? 'Đang lưu...' : 'Lưu Phí Ship'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* STORE SETTINGS MODAL */}
+      <StoreSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSettingsUpdated={() => fetchOrders()}
+      />
     </div>
   );
 }

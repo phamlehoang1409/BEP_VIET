@@ -34,6 +34,8 @@ export default function Checkout() {
     cartItems,
     subtotal,
     deliveryFee,
+    baseShippingFee,
+    freeShipThreshold,
     discount,
     promoCode,
     promoMessage,
@@ -166,6 +168,7 @@ export default function Checkout() {
         note,
         payment_method: paymentMethod,
         discount,
+        delivery_fee: deliveryFee,
         coupon_code: promoCode || null,
         items: cartItems.map((item) => ({
           food_id: item.food.id,
@@ -612,13 +615,22 @@ export default function Checkout() {
                     <span>-{formatVND(discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>Phí ship nội thành Hà Nội:</span>
                   <span className="font-semibold text-slate-800">
                     {deliveryFee === 0 ? (
-                      <span className="text-emerald-600 font-bold uppercase">Miễn phí (&gt;200k)</span>
+                      <span className="text-emerald-600 font-bold uppercase">
+                        Miễn phí {freeShipThreshold > 0 ? `(Đơn > ${formatVND(freeShipThreshold)})` : ''}
+                      </span>
                     ) : (
-                      formatVND(deliveryFee)
+                      <span>
+                        {formatVND(deliveryFee)}
+                        {freeShipThreshold > 0 && (
+                          <span className="text-[11px] text-slate-400 font-normal ml-1">
+                            (Freeship từ {formatVND(freeShipThreshold)})
+                          </span>
+                        )}
+                      </span>
                     )}
                   </span>
                 </div>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { validateCoupon } from '../api';
+import { validateCoupon, getStoreSettings, getSocket } from '../api';
 
 const CartContext = createContext();
 
@@ -17,6 +17,37 @@ export function CartProvider({ children }) {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
+
+  // Store Settings (Dynamic shipping fee & free ship threshold configured by Admin)
+  const [storeSettings, setStoreSettings] = useState({
+    delivery_fee_default: 15000,
+    free_ship_threshold: 200000,
+    is_currently_open: true
+  });
+
+  // Load store settings on mount
+  useEffect(() => {
+    getStoreSettings()
+      .then((res) => {
+        if (res.success && res.settings) {
+          setStoreSettings(res.settings);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Listen to store settings updates in real time
+  useEffect(() => {
+    const socket = getSocket();
+    const handleSettingsUpdated = (newSettings) => {
+      if (newSettings) {
+        setStoreSettings((prev) => ({ ...prev, ...newSettings }));
+      }
+    };
+
+    socket.on('store_settings_updated', handleSettingsUpdated);
+    return () => socket.off('store_settings_updated', handleSettingsUpdated);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('bepviet_cart', JSON.stringify(cartItems));
@@ -68,8 +99,21 @@ export function CartProvider({ children }) {
     0
   );
 
-  // Hanoi inner city delivery fee: 15.000 VND, free if subtotal >= 200.000 VND
-  const deliveryFee = subtotal >= 200000 || subtotal === 0 ? 0 : 15000;
+  // Dynamic delivery fee based on Admin store settings (NOT hardcoded 15k)
+  const baseShippingFee =
+    storeSettings.delivery_fee_default !== undefined
+      ? Number(storeSettings.delivery_fee_default)
+      : 15000;
+
+  const freeShipThreshold =
+    storeSettings.free_ship_threshold !== undefined
+      ? Number(storeSettings.free_ship_threshold)
+      : 200000;
+
+  const deliveryFee =
+    subtotal === 0 || (freeShipThreshold > 0 && subtotal >= freeShipThreshold)
+      ? 0
+      : baseShippingFee;
 
   // Apply promo vouchers using backend validation
   const applyPromo = async (code) => {
@@ -108,10 +152,10 @@ export function CartProvider({ children }) {
         return { success: true, discount: disc };
       }
       if (cleanCode === 'HANOI15K') {
-        const disc = 15000;
+        const disc = Math.min(baseShippingFee || 15000, 15000);
         setPromoCode('HANOI15K');
         setDiscount(disc);
-        setPromoMessage('Đã trừ 15.000 ₫ phí ship nội thành Hà Nội!');
+        setPromoMessage(`Đã trừ ${disc.toLocaleString('vi-VN')} ₫ phí ship nội thành Hà Nội!`);
         return { success: true, discount: disc };
       }
       if (cleanCode === 'BEPVIETVIP') {
@@ -143,6 +187,10 @@ export function CartProvider({ children }) {
         setIsCartOpen,
         subtotal,
         deliveryFee,
+        baseShippingFee,
+        freeShipThreshold,
+        storeSettings,
+        setStoreSettings,
         discount,
         promoCode,
         promoMessage,

@@ -232,6 +232,12 @@ export const confirmOrder = (id) =>
     method: 'PATCH'
   });
 
+export const updateOrderDeliveryFee = (id, delivery_fee) =>
+  request(`/orders/${id}/delivery-fee`, {
+    method: 'PATCH',
+    body: JSON.stringify({ delivery_fee })
+  });
+
 // --- Store Settings API ---
 export const getStoreSettings = () => request('/settings');
 

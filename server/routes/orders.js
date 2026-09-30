@@ -98,7 +98,36 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const delivery_fee = subtotal >= 250000 ? 0 : 15000;
+    // Dynamic delivery fee from Store Settings or request body (no hardcoded 15k)
+    let dynamicShipFee = 15000;
+    let dynamicFreeShipThreshold = 200000;
+
+    try {
+      const { data: setRow } = await supabase
+        .from('users')
+        .select('name')
+        .eq('phone', 'STORE_SETTINGS')
+        .eq('role', 'store_settings')
+        .maybeSingle();
+
+      if (setRow && setRow.name) {
+        const parsed = JSON.parse(setRow.name);
+        if (parsed.delivery_fee_default !== undefined) {
+          dynamicShipFee = Number(parsed.delivery_fee_default);
+        }
+        if (parsed.free_ship_threshold !== undefined) {
+          dynamicFreeShipThreshold = Number(parsed.free_ship_threshold);
+        }
+      }
+    } catch (e) {}
+
+    let delivery_fee = dynamicShipFee;
+    if (req.body.delivery_fee !== undefined && !isNaN(Number(req.body.delivery_fee))) {
+      delivery_fee = Number(req.body.delivery_fee);
+    } else if (dynamicFreeShipThreshold > 0 && subtotal >= dynamicFreeShipThreshold) {
+      delivery_fee = 0;
+    }
+
     const total_amount = Math.max(0, subtotal - Number(discount) + delivery_fee);
     const order_code = generateOrderCode();
 
@@ -396,6 +425,64 @@ router.patch('/:id/confirm', async (req, res) => {
     return res.json({
       success: true,
       message: 'Đã xác nhận đơn hàng thành công! Quán bắt đầu nấu món.',
+      order: orderFormatted
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/orders/:id/delivery-fee - Admin adjusts delivery fee for an order
+router.patch('/:id/delivery-fee', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { delivery_fee } = req.body;
+    if (delivery_fee === undefined || isNaN(Number(delivery_fee))) {
+      return res.status(400).json({ error: 'Phí ship không hợp lệ' });
+    }
+
+    const newFee = Math.max(0, Number(delivery_fee));
+
+    if (!supabase) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    // Get current order
+    const { data: curOrder } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!curOrder) return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+
+    const newTotal = Math.max(0, Number(curOrder.subtotal) - Number(curOrder.discount || 0) + newFee);
+
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({
+        delivery_fee: newFee,
+        total_amount: newTotal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
+
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Lỗi cập nhật phí ship' });
+    }
+
+    const orderFormatted = { ...updated, items: updated.order_items || [] };
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', orderFormatted);
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã cập nhật phí ship thành ${newFee.toLocaleString('vi-VN')} ₫`,
       order: orderFormatted
     });
   } catch (error) {
