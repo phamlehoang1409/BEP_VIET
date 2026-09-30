@@ -58,7 +58,9 @@ router.get('/', async (req, res) => {
       return res.json({ success: true, foods: [] });
     }
 
-    let query = supabase.from('foods').select('*, categories(name, slug)');
+    const hasSlugFilter = category && category !== 'all' && category !== 'undefined' && category !== 'null' && isNaN(category);
+    const selectStr = hasSlugFilter ? '*, categories!inner(name, slug)' : '*, categories(name, slug)';
+    let query = supabase.from('foods').select(selectStr);
 
     if (category && category !== 'all' && category !== 'undefined' && category !== 'null') {
       if (!isNaN(category)) {

@@ -184,9 +184,9 @@ export default function Home() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Danh Mục Thực Đơn
+              Danh Mục Mì & Đồ Ăn Vặt
             </h2>
-            <p className="text-xs text-slate-500">Khám phá các dòng Mì Indomie thượng hạng và đồ uống thủ công</p>
+            <p className="text-xs text-slate-500">Khám phá Mì Indomie đặc biệt, đồ ăn vặt chiên giòn, topping và nước giải khát</p>
           </div>
           <Link
             to="/menu"

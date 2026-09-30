@@ -83,10 +83,10 @@ export default function Menu() {
             </a>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Thực Đơn Mì Indomie & Ẩm Thực Bếp Việt
+            Thực Đơn Mì Indomie & Đồ Ăn Vặt Bếp Việt
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Mì Indomie xá xíu, bò trứng, hải sản sa tế kèm đồ uống thủ công thượng hạng
+            Mì Indomie trộn sốt cay ngọt, đồ ăn vặt chiên giòn, topping phong phú và nước giải khát mát lạnh
           </p>
         </div>
 
