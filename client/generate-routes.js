@@ -18,6 +18,7 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
     'admin/login',
     'admin/foods',
     'admin/orders',
+    'admin/coupons',
     'admin/chat',
     'menu',
     'checkout',

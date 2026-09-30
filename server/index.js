@@ -10,6 +10,8 @@ const orderRoutes = require('./routes/orders');
 const chatRoutes = require('./routes/chat');
 const statsRoutes = require('./routes/stats');
 const uploadRoutes = require('./routes/upload');
+const settingsRoutes = require('./routes/settings');
+const couponsRoutes = require('./routes/coupons');
 const setupChatSocket = require('./socket/chatSocket');
 const supabase = require('./db/supabase');
 
@@ -41,6 +43,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/coupons', couponsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -74,11 +74,19 @@ export default function Menu() {
       {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
+              Giao Hỏa Tốc Nội Thành Hà Nội
+            </span>
+            <a href="tel:0353859726" className="text-[11px] font-bold text-amber-600 hover:underline">
+              📞 Hotline: 0353859726
+            </a>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Thực Đơn Món Ăn Bếp Việt
+            Thực Đơn Mì Indomie & Ẩm Thực Bếp Việt
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Hương vị gia truyền Việt Nam - Nóng giòn thơm ngon giao ngay
+            Mì Indomie xá xíu, bò trứng, hải sản sa tế kèm đồ uống thủ công thượng hạng
           </p>
         </div>
 

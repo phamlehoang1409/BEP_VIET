@@ -48,101 +48,61 @@ export function formatVND(amount) {
   }).format(amount);
 }
 
-// 63 Provinces / Cities in Vietnam
+// Priority Delivery Scope: Nội thành Hà Nội
 export const VIETNAM_PROVINCES = [
-  'TP. Hồ Chí Minh',
   'Hà Nội',
+  'TP. Hồ Chí Minh',
   'Đà Nẵng',
   'Hải Phòng',
   'Cần Thơ',
-  'An Giang',
-  'Bà Rịa - Vũng Tàu',
-  'Bắc Giang',
-  'Bắc Kạn',
-  'Bạc Liêu',
   'Bắc Ninh',
-  'Bến Tre',
-  'Bình Định',
-  'Bình Dương',
-  'Bình Phước',
-  'Bình Thuận',
-  'Cà Mau',
-  'Cao Bằng',
-  'Đắk Lắk',
-  'Đắk Nông',
-  'Điện Biên',
-  'Đồng Nai',
-  'Đồng Tháp',
-  'Gia Lai',
-  'Hà Giang',
-  'Hà Nam',
-  'Hà Tĩnh',
   'Hải Dương',
-  'Hậu Giang',
-  'Hòa Bình',
   'Hưng Yên',
-  'Khánh Hòa',
-  'Kiên Giang',
-  'Kon Tum',
-  'Lai Châu',
-  'Lâm Đồng',
-  'Lạng Sơn',
-  'Lào Cai',
-  'Long An',
-  'Nam Định',
-  'Nghệ An',
-  'Ninh Bình',
-  'Ninh Thuận',
-  'Phú Thọ',
-  'Phú Yên',
-  'Quảng Bình',
-  'Quảng Nam',
-  'Quảng Ngãi',
   'Quảng Ninh',
-  'Quảng Trị',
-  'Sóc Trăng',
-  'Sơn La',
-  'Tây Ninh',
-  'Thái Bình',
-  'Thái Nguyên',
-  'Thanh Hóa',
-  'Thừa Thiên Huế',
-  'Tiền Giang',
-  'Trà Vinh',
-  'Tuyên Quang',
-  'Vĩnh Long',
-  'Vĩnh Phúc',
-  'Yên Bái'
+  'Vĩnh Phúc'
 ];
+
+export const HANOI_INNER_DISTRICTS = [
+  'Quận Hoàn Kiếm',
+  'Quận Ba Đình',
+  'Quận Đống Đa',
+  'Quận Cầu Giấy',
+  'Quận Hai Bà Trưng',
+  'Quận Thanh Xuân',
+  'Quận Tây Hồ',
+  'Quận Nam Từ Liêm',
+  'Quận Bắc Từ Liêm',
+  'Quận Hà Đông',
+  'Quận Hoàng Mai',
+  'Quận Long Biên'
+];
+
+export const HANOI_DISTRICT_WARDS = {
+  'Quận Hoàn Kiếm': ['Phường Hàng Bạc', 'Phường Hàng Đào', 'Phường Hàng Gai', 'Phường Tràng Tiền', 'Phường Lý Thái Tổ', 'Phường Phan Chu Trinh', 'Phường Hàng Mã', 'Phường Cửa Đông', 'Phường Cửa Nam', 'Phường Đồng Xuân'],
+  'Quận Ba Đình': ['Phường Kim Mã', 'Phường Giảng Võ', 'Phường Đội Cấn', 'Phường Liễu Giai', 'Phường Ngọc Hà', 'Phường Quán Thánh', 'Phường Trúc Bạch', 'Phường Thành Công', 'Phường Cống Vị', 'Phường Điện Biên'],
+  'Quận Đống Đa': ['Phường Ô Chợ Dừa', 'Phường Láng Hạ', 'Phường Láng Thượng', 'Phường Cát Linh', 'Phường Văn Miếu', 'Phường Nam Đồng', 'Phường Khâm Thiên', 'Phường Quang Trung', 'Phường Kim Liên'],
+  'Quận Cầu Giấy': ['Phường Dịch Vọng', 'Phường Dịch Vọng Hậu', 'Phường Mai Dịch', 'Phường Nghĩa Đô', 'Phường Nghĩa Tân', 'Phường Quan Hoa', 'Phường Trung Hòa', 'Phường Yên Hòa'],
+  'Quận Hai Bà Trưng': ['Phường Bách Khoa', 'Phường Bạch Đằng', 'Phường Bạch Mai', 'Phường Cầu Dền', 'Phường Đồng Tâm', 'Phường Lê Đại Hành', 'Phường Minh Khai', 'Phường Phố Huế', 'Phường Thanh Nhàn', 'Phường Vĩnh Tuy'],
+  'Quận Thanh Xuân': ['Phường Khương Mai', 'Phường Khương Trung', 'Phường Khương Đình', 'Phường Thanh Xuân Bắc', 'Phường Thanh Xuân Nam', 'Phường Thanh Xuân Trung', 'Phường Nhân Chính', 'Phường Phương Liệt'],
+  'Quận Tây Hồ': ['Phường Bưởi', 'Phường Thụy Khuê', 'Phường Yên Phụ', 'Phường Tứ Liên', 'Phường Quảng An', 'Phường Nhật Tân', 'Phường Xuân La', 'Phường Phú Thượng'],
+  'Quận Nam Từ Liêm': ['Phường Mỹ Đình 1', 'Phường Mỹ Đình 2', 'Phường Mễ Trì', 'Phường Phú Đô', 'Phường Cầu Diễn', 'Phường Trung Văn'],
+  'Quận Bắc Từ Liêm': ['Phường Cổ Nhuế 1', 'Phường Cổ Nhuế 2', 'Phường Đông Ngạc', 'Phường Xuân Đỉnh', 'Phường Phúc Diễn'],
+  'Quận Hà Đông': ['Phường Quang Trung', 'Phường Yết Kiêu', 'Phường Nguyễn Trãi', 'Phường Văn Quán', 'Phường Mộ Lao', 'Phường La Khê', 'Phường Vạn Phúc'],
+  'Quận Hoàng Mai': ['Phường Hoàng Liệt', 'Phường Định Công', 'Phường Giáp Bát', 'Phường Thịnh Liệt', 'Phường Tương Mai', 'Phường Mai Động', 'Phường Vĩnh Hưng'],
+  'Quận Long Biên': ['Phường Bồ Đề', 'Phường Gia Thụy', 'Phường Ngọc Lâm', 'Phường Long Biên', 'Phường Thượng Thanh']
+};
 
 // Popular Districts mapped to main cities
 export const CITY_DISTRICTS = {
+  'Hà Nội': HANOI_INNER_DISTRICTS,
   'TP. Hồ Chí Minh': [
-    'Quận 1', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8',
-    'Quận 10', 'Quận 11', 'Quận 12', 'TP. Thủ Đức', 'Quận Bình Thạnh',
-    'Quận Gò Vấp', 'Quận Phú Nhuận', 'Quận Tân Bình', 'Quận Tân Phú',
-    'Quận Bình Tân', 'Huyện Bình Chánh', 'Huyện Hóc Môn', 'Huyện Nhà Bè'
-  ],
-  'Hà Nội': [
-    'Quận Ba Đình', 'Quận Hoàn Kiếm', 'Quận Tây Hồ', 'Quận Long Biên',
-    'Quận Cầu Giấy', 'Quận Đống Đa', 'Quận Hai Bà Trưng', 'Quận Hoàng Mai',
-    'Quận Thanh Xuân', 'Quận Nam Từ Liêm', 'Quận Bắc Từ Liêm', 'Quận Hà Đông'
+    'Quận 1', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 7', 'Quận 10', 'TP. Thủ Đức', 'Quận Bình Thạnh'
   ],
   'Đà Nẵng': [
-    'Quận Hải Châu', 'Quận Thanh Khê', 'Quận Sơn Trà', 'Quận Ngũ Hành Sơn',
-    'Quận Liên Chiểu', 'Quận Cẩm Lệ', 'Huyện Hòa Vang'
-  ],
-  'Cần Thơ': [
-    'Quận Ninh Kiều', 'Quận Bình Thủy', 'Quận Cái Răng', 'Quận Ô Môn', 'Quận Thốt Nốt'
+    'Quận Hải Châu', 'Quận Thanh Khê', 'Quận Sơn Trà', 'Quận Ngũ Hành Sơn'
   ],
   'Hải Phòng': [
-    'Quận Hồng Bàng', 'Quận Ngô Quyền', 'Quận Lê Chân', 'Quận Hải An', 'Quận Kiến An'
-  ],
-  'Bình Dương': [
-    'TP. Thủ Dầu Một', 'TP. Thuận An', 'TP. Dĩ An', 'TP. Tân Uyên', 'Thị xã Bến Cát'
-  ],
-  'Đồng Nai': [
-    'TP. Biên Hòa', 'TP. Long Khánh', 'Huyện Long Thành', 'Huyện Nhơn Trạch'
+    'Quận Hồng Bàng', 'Quận Ngô Quyền', 'Quận Lê Chân', 'Quận Hải An'
   ]
 };
 

@@ -3,10 +3,12 @@ import { NavLink } from 'react-router-dom';
 import { Home, Utensils, ShoppingBag, Package, MessageCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function BottomNav() {
   const { itemCount, setIsCartOpen } = useCart();
   const { unreadCount, setIsChatOpen } = useChat();
+  const { user, setIsAuthModalOpen } = useAuth();
 
   const navClass = ({ isActive }) =>
     `flex flex-col items-center justify-center flex-1 py-1.5 transition ${
@@ -54,7 +56,13 @@ export default function BottomNav() {
 
         {/* Live Chat */}
         <button
-          onClick={() => setIsChatOpen(true)}
+          onClick={() => {
+            if (!user) {
+              setIsAuthModalOpen(true);
+            } else {
+              setIsChatOpen(true);
+            }
+          }}
           className="flex flex-col items-center justify-center flex-1 py-1.5 text-slate-500 relative transition"
         >
           <div className="relative">

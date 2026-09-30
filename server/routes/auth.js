@@ -56,6 +56,8 @@ router.post('/verify-otp', async (req, res) => {
 
     // Check if user exists in Supabase
     let user = null;
+    const cleanName = name && typeof name === 'string' ? name.trim() : '';
+
     if (supabase) {
       const { data: existingUser } = await supabase
         .from('users')
@@ -64,9 +66,19 @@ router.post('/verify-otp', async (req, res) => {
         .maybeSingle();
 
       if (existingUser) {
-        user = existingUser;
+        if (cleanName && cleanName !== existingUser.name) {
+          const { data: updated } = await supabase
+            .from('users')
+            .update({ name: cleanName })
+            .eq('phone', normalized)
+            .select()
+            .maybeSingle();
+          user = updated || { ...existingUser, name: cleanName };
+        } else {
+          user = existingUser;
+        }
       } else {
-        const userName = name && name.trim() ? name.trim() : `Khách hàng ${normalized.slice(-4)}`;
+        const userName = cleanName || `Khách hàng ${normalized.slice(-4)}`;
         const { data: newUser, error: insertErr } = await supabase
           .from('users')
           .insert({
@@ -88,7 +100,7 @@ router.post('/verify-otp', async (req, res) => {
       user = {
         id: Date.now(),
         phone: normalized,
-        name: name && name.trim() ? name.trim() : `Khách hàng ${normalized.slice(-4)}`,
+        name: cleanName || `Khách hàng ${normalized.slice(-4)}`,
         role: 'customer'
       };
     }

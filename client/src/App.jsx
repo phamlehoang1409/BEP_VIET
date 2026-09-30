@@ -27,6 +27,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import FoodManagement from './pages/admin/FoodManagement';
 import OrderManagement from './pages/admin/OrderManagement';
+import CouponManagement from './pages/admin/CouponManagement';
 import AdminChat from './pages/admin/AdminChat';
 import AdminLogin from './pages/admin/AdminLogin';
 
@@ -90,17 +91,21 @@ function CustomerLayout() {
         <PwaInstallBanner />
 
         {/* Customer Footer */}
-        <footer className="hidden md:block bg-white border-t border-slate-100 py-10 mt-12 text-slate-500 text-xs">
+        <footer className="hidden md:block bg-[#0D0F17] border-t border-amber-900/30 py-8 mt-12 text-slate-400 text-xs">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🍲</span>
-              <span className="font-extrabold text-sm text-slate-800">Bếp Việt Gourmet</span>
-              <span className="text-slate-400">• Ẩm thực tinh hoa Việt Nam</span>
+              <span className="text-xl">🍜</span>
+              <span className="font-black text-sm text-amber-300">Bếp Việt Gourmet</span>
+              <span className="text-slate-500">• Đỉnh Cao Mì Indomie Thượng Hạng</span>
             </div>
             <div className="flex items-center gap-6">
-              <span>Hotline: 1900 6868</span>
-              <span>Mở cửa: 06:00 - 23:00</span>
-              <span className="text-orange-600 font-bold">Giao hàng 63 tỉnh thành</span>
+              <a href="tel:0353859726" className="text-amber-400 font-bold hover:underline flex items-center gap-1.5">
+                <span>📞 Hotline:</span> 0353859726
+              </a>
+              <span>Mở cửa: 08:00 - 23:00</span>
+              <span className="text-amber-400 font-bold bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/20">
+                🚀 Giao hỏa tốc Nội thành Hà Nội
+              </span>
             </div>
           </div>
         </footer>
@@ -134,6 +139,7 @@ export default function App() {
                   <Route index element={<Dashboard />} />
                   <Route path="foods" element={<FoodManagement />} />
                   <Route path="orders" element={<OrderManagement />} />
+                  <Route path="coupons" element={<CouponManagement />} />
                   <Route path="chat" element={<AdminChat />} />
                 </Route>
 

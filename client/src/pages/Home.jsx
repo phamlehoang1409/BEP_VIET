@@ -10,7 +10,9 @@ import {
   HeartHandshake,
   Search,
   Star,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  Ticket
 } from 'lucide-react';
 import { getFoods, getCategories } from '../api';
 import FoodCard from '../components/FoodCard';
@@ -44,70 +46,85 @@ export default function Home() {
   }, []);
 
   const featuredFoods = foods.filter((f) => f.is_featured === 1);
-  const bestSellers = [...foods].sort((a, b) => b.sales_count - a.sales_count).slice(0, 6);
+  const bestSellers = [...foods].sort((a, b) => b.sales_count - a.sales_count).slice(0, 8);
 
   return (
-    <div className="min-h-screen pb-20 md:pb-12 space-y-12">
-      {/* HERO BANNER SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 text-white py-12 md:py-20 px-4 sm:px-6 lg:px-8">
-        {/* Background decorative bubbles */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-orange-400/20 blur-2xl pointer-events-none" />
+    <div className="min-h-screen pb-20 md:pb-12 space-y-12 bg-[#FAF8F5]">
+      {/* HERO LUXURY BANNER SECTION */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0D0F17] via-[#161922] to-[#0A0C13] text-white py-14 md:py-24 px-4 sm:px-6 lg:px-8 border-b border-amber-500/20">
+        {/* Ambient luxury lighting */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-orange-500/10 blur-3xl pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-amber-200 text-xs sm:text-sm font-bold border border-white/20">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Giao Hỏa Tốc Trong 20 Phút • Nóng Hổi Chuẩn Vị</span>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 backdrop-blur-md text-amber-300 text-xs sm:text-sm font-bold border border-amber-500/30">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Giao Hỏa Tốc 20-30 Phút • Nội Thành Hà Nội</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15]">
-              Món Ngon Đậm Vị <br />
-              <span className="text-amber-300 underline decoration-amber-400 decoration-wavy decoration-2">
-                Ẩm Thực Việt
-              </span>{' '}
-              Giao Tận Nơi
+              Đỉnh Cao Hương Vị <br />
+              <span className="bg-gradient-to-r from-amber-300 via-amber-200 to-orange-400 bg-clip-text text-transparent">
+                Mì Indomie Thượng Hạng
+              </span>
             </h1>
 
-            <p className="text-sm sm:text-base text-orange-100 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
-              Từ bát Phở Bò Tái Lăn sôi sùng sục, Cơm Tấm sườn nướng than hoa đến ly Trà Sữa đường đen béo ngậy. Đặt ngay, shipper có mặt tức thì!
+            <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
+              Trải nghiệm các tuyệt tác Mì Trộn Bò Trứng lòng đào, Xá Xíu Mật Ong quay xém cạnh, Hải Sản Sa Tế cay nồng chuẩn vị nhà hàng. Nóng giòn giao tận cửa tại Hà Nội!
             </p>
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
               <Link
                 to="/menu"
-                className="flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-amber-300 hover:text-amber-200 font-extrabold text-sm sm:text-base shadow-2xl active:scale-95 transition"
+                className="flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm sm:text-base shadow-2xl shadow-amber-500/25 active:scale-95 transition"
               >
-                <span>Xem Toàn Bộ Thực Đơn</span>
-                <ArrowRight className="w-5 h-5" />
+                <span>Thưởng Thức Thực Đơn Ngay</span>
+                <ArrowRight className="w-5 h-5 text-slate-950" />
               </Link>
-              <div className="text-left hidden sm:block pl-2">
-                <p className="text-xs text-orange-200 font-semibold">Ưu đãi hôm nay</p>
-                <p className="text-sm font-bold text-white">Nhập <span className="bg-white/20 px-2 py-0.5 rounded text-amber-200 font-mono">BEPVIET20</span> giảm 20k</p>
-              </div>
+
+              <a
+                href="tel:0353859726"
+                className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-amber-300 font-bold text-sm border border-amber-500/30 transition"
+              >
+                <Phone className="w-4 h-4 text-amber-400" />
+                <span>Hotline: 0353859726</span>
+              </a>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs text-slate-400">
+              <span className="text-amber-400 font-bold flex items-center gap-1">
+                <Ticket className="w-3.5 h-3.5" /> Mã Hot Hôm Nay:
+              </span>
+              <span className="bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 font-mono text-amber-300 font-bold">
+                INDOMIE20 (Giảm 20%)
+              </span>
+              <span className="bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 font-mono text-amber-300 font-bold">
+                HANOI15K (Trừ 15k ship)
+              </span>
             </div>
           </div>
 
           {/* Hero Image Showcase */}
           <div className="lg:col-span-5 relative flex justify-center">
             <div className="relative w-72 sm:w-88 md:w-96 aspect-square">
-              <div className="absolute inset-0 rounded-full bg-white/20 blur-xl animate-pulseGlow" />
+              <div className="absolute inset-0 rounded-full bg-amber-500/20 blur-2xl animate-pulse" />
               <img
-                src="https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80"
-                alt="Phở Bò Việt Nam"
-                className="w-full h-full object-cover rounded-full border-4 border-white/60 shadow-2xl animate-float relative z-10"
+                src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80"
+                alt="Mì Indomie Thượng Hạng"
+                className="w-full h-full object-cover rounded-full border-4 border-amber-400/40 shadow-2xl relative z-10"
               />
               {/* Floating review card */}
-              <div className="absolute -bottom-2 -left-4 sm:bottom-4 sm:left-0 z-20 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl shadow-xl text-slate-800 border border-orange-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-lg">
-                  🍲
+              <div className="absolute -bottom-2 -left-4 sm:bottom-4 sm:left-0 z-20 bg-[#161922]/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl shadow-2xl text-white border border-amber-500/30 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-lg">
+                  🍜
                 </div>
                 <div>
-                  <div className="flex items-center gap-1 text-amber-500">
+                  <div className="flex items-center gap-1 text-amber-400">
                     {'★★★★★'}
-                    <span className="text-xs font-bold text-slate-700 ml-1">4.9/5</span>
+                    <span className="text-xs font-bold text-slate-300 ml-1">4.9/5</span>
                   </div>
-                  <p className="text-xs font-extrabold text-slate-800">5.000+ Đơn giao nóng hổi</p>
+                  <p className="text-xs font-black text-amber-300">10.000+ Đĩa Indomie Phục Vụ</p>
                 </div>
               </div>
             </div>
@@ -117,44 +134,44 @@ export default function Home() {
 
       {/* PROMOTIONAL TICKER / FEATURES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-3xl bg-white border border-slate-100 shadow-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-3xl bg-white border border-slate-200/80 shadow-sm">
           <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
               <Truck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Giao Nhanh 20p</h4>
-              <p className="text-[11px] text-slate-400">Đóng gói giữ nhiệt</p>
+              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Giao HN 20-30p</h4>
+              <p className="text-[11px] text-slate-400">Đóng hộp giữ nhiệt vàng</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Chuẩn Vệ Sinh</h4>
-              <p className="text-[11px] text-slate-400">100% Tươi sạch</p>
+              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Bảo Hiểm Đơn</h4>
+              <p className="text-[11px] text-slate-400">Chủ quán duyệt trực tiếp</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center shrink-0">
               <Flame className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Freeship Từ 250k</h4>
-              <p className="text-[11px] text-slate-400">Không lo phí vận chuyển</p>
+              <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Freeship Từ 200k</h4>
+              <p className="text-[11px] text-slate-400">12 quận nội thành Hà Nội</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
               <HeartHandshake className="w-5 h-5" />
             </div>
             <div>
               <h4 className="font-extrabold text-xs sm:text-sm text-slate-800">Chat Với Quán</h4>
-              <p className="text-[11px] text-slate-400">Hỗ trợ tức thời 24/7</p>
+              <p className="text-[11px] text-slate-400">Chăm sóc khách hàng VIP</p>
             </div>
           </div>
         </div>
@@ -165,13 +182,13 @@ export default function Home() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Danh Mục Món Ăn
+              Danh Mục Thực Đơn
             </h2>
-            <p className="text-xs text-slate-500">Khám phá các món ăn theo từng sở thích của bạn</p>
+            <p className="text-xs text-slate-500">Khám phá các dòng Mì Indomie thượng hạng và đồ uống thủ công</p>
           </div>
           <Link
             to="/menu"
-            className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+            className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
           >
             <span>Tất cả</span>
             <ChevronRight className="w-4 h-4" />
@@ -183,8 +200,8 @@ export default function Home() {
             onClick={() => setActiveCategory('all')}
             className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition duration-200 shadow-sm ${
               activeCategory === 'all'
-                ? 'bg-orange-500 text-white shadow-orange-500/25'
-                : 'bg-white text-slate-700 hover:bg-orange-50 border border-slate-100'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-amber-500/25'
+                : 'bg-white text-slate-700 hover:bg-amber-50 border border-slate-200'
             }`}
           >
             🍽️ Tất cả món
@@ -195,8 +212,8 @@ export default function Home() {
               onClick={() => setActiveCategory(cat.slug)}
               className={`px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition duration-200 shadow-sm ${
                 activeCategory === cat.slug
-                  ? 'bg-orange-500 text-white shadow-orange-500/25'
-                  : 'bg-white text-slate-700 hover:bg-orange-50 border border-slate-100'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-amber-500/25'
+                  : 'bg-white text-slate-700 hover:bg-amber-50 border border-slate-200'
               }`}
             >
               {cat.name}
@@ -205,23 +222,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURED DISHES */}
+      {/* FEATURED / BEST SELLER DISHES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-              <Flame className="w-5 h-5 fill-orange-500" />
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+              <Flame className="w-5 h-5 fill-amber-500" />
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Món Bán Chạy Nhất Tuần
+                Món Bán Chạy Nhất Tại Hà Nội
               </h2>
-              <p className="text-xs text-slate-500">Được khách hàng yêu thích và đặt nhiều nhất</p>
+              <p className="text-xs text-slate-500">Mì Indomie đặc sản được thực khách sành ăn đánh giá 5 sao</p>
             </div>
           </div>
           <Link
             to="/menu"
-            className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+            className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
           >
             <span>Xem thêm</span>
             <ChevronRight className="w-4 h-4" />
@@ -252,24 +269,24 @@ export default function Home() {
 
       {/* FLASH VOUCHER BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 sm:p-10 text-white relative overflow-hidden shadow-2xl border border-slate-800">
+        <div className="rounded-3xl bg-gradient-to-r from-[#0D0F17] via-[#161922] to-[#0D0F17] p-6 sm:p-10 text-white relative overflow-hidden shadow-2xl border border-amber-500/30">
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <span className="text-xs font-black tracking-widest text-amber-400 uppercase bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
-                Ưu Đãi Độc Quyền
+                Voucher Độc Quyền Hà Nội
               </span>
-              <h3 className="text-2xl sm:text-3xl font-black">
-                Giảm 20.000 ₫ Cho Đơn Hàng Đầu Tiên
+              <h3 className="text-2xl sm:text-3xl font-black text-white">
+                Giảm 20% Mì Indomie Thượng Hạng
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 max-w-lg">
-                Áp dụng mã giảm giá <strong className="text-amber-300 font-mono">BEPVIET20</strong> cho đơn từ 100.000 ₫. Đặt ngay kẻo lỡ!
+                Áp dụng mã giảm giá <strong className="text-amber-300 font-mono">INDOMIE20</strong> tại bước thanh toán. Miễn phí ship nội thành từ 200.000 ₫!
               </p>
             </div>
             <Link
               to="/menu"
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-sm shadow-xl active:scale-95 transition whitespace-nowrap"
+              className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm shadow-xl active:scale-95 transition whitespace-nowrap"
             >
-              Áp Dụng & Đặt Ngay
+              Áp Dụng & Thưởng Thức Ngay
             </Link>
           </div>
         </div>

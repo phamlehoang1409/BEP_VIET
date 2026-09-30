@@ -11,65 +11,105 @@ import {
   ArrowRight,
   Phone,
   MapPin,
-  ExternalLink
+  Sparkles,
+  AlertCircle,
+  ShieldCheck,
+  RotateCw
 } from 'lucide-react';
 import { getOrderById, getSocket } from '../api';
 import { formatVND } from '../utils/vietnamData';
 import { useChat } from '../context/ChatContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function OrderSuccess() {
   const { id } = useParams();
   const location = useLocation();
   const { setIsChatOpen } = useChat();
+  const { user, setIsAuthModalOpen } = useAuth();
 
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
-
-  // Trigger confetti explosion on load
-  useEffect(() => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-  }, []);
+  const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
 
   // Fetch or sync order
-  useEffect(() => {
-    if (!order && id) {
-      setLoading(true);
+  const syncOrder = () => {
+    if (id) {
       getOrderById(id)
         .then((res) => {
-          if (res.success && res.order) setOrder(res.order);
+          if (res.success && res.order) {
+            setOrder(res.order);
+          }
         })
         .catch(console.error)
         .finally(() => setLoading(false));
     }
-  }, [id, order]);
+  };
 
-  // Listen to live order status updates
+  useEffect(() => {
+    syncOrder();
+  }, [id]);
+
+  // Polling every 2.5s while pending to catch admin confirmation instantly even without socket
+  useEffect(() => {
+    if (order?.status === 'pending') {
+      const timer = setInterval(syncOrder, 2500);
+      return () => clearInterval(timer);
+    }
+  }, [order?.status]);
+
+  // Listen to live socket events (order_confirmed, order_status_updated)
   useEffect(() => {
     const socket = getSocket();
-    const handleStatusUpdate = (updatedOrder) => {
-      if (updatedOrder.id === order?.id || updatedOrder.order_code === order?.order_code) {
-        setOrder(updatedOrder);
+
+    const handleUpdate = (updatedOrder) => {
+      if (
+        updatedOrder &&
+        (updatedOrder.id === order?.id ||
+          updatedOrder.order_code === order?.order_code ||
+          String(updatedOrder.id) === String(id))
+      ) {
+        setOrder((prev) => ({ ...prev, ...updatedOrder }));
       }
     };
 
-    socket.on('order_status_updated', handleStatusUpdate);
-    return () => socket.off('order_status_updated', handleStatusUpdate);
-  }, [order]);
+    socket.on('order_confirmed', handleUpdate);
+    socket.on('order_status_updated', handleUpdate);
 
-  const getStatusStep = (status) => {
+    return () => {
+      socket.off('order_confirmed', handleUpdate);
+      socket.off('order_status_updated', handleUpdate);
+    };
+  }, [order?.id, order?.order_code, id]);
+
+  // Trigger celebration confetti ONLY when order is confirmed or progressed past pending
+  useEffect(() => {
+    if (order && order.status !== 'pending' && order.status !== 'cancelled' && !hasTriggeredConfetti) {
+      setHasTriggeredConfetti(true);
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [order?.status, hasTriggeredConfetti]);
+
+  const isPending = order?.status === 'pending';
+  const isConfirmed = order?.status === 'confirmed';
+  const isCancelled = order?.status === 'cancelled';
+
+  // 5-Stage Stepper
+  const getStepIndex = (status) => {
     switch (status) {
       case 'pending':
         return 1;
-      case 'preparing':
+      case 'confirmed':
         return 2;
-      case 'delivering':
+      case 'preparing':
         return 3;
-      case 'completed':
+      case 'delivering':
         return 4;
+      case 'completed':
+        return 5;
       case 'cancelled':
         return -1;
       default:
@@ -77,12 +117,12 @@ export default function OrderSuccess() {
     }
   };
 
-  const currentStep = getStatusStep(order?.status);
+  const currentStep = getStepIndex(order?.status);
 
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm text-slate-500">Đang tải thông tin đơn hàng...</p>
       </div>
     );
@@ -90,97 +130,177 @@ export default function OrderSuccess() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 md:py-12 pb-24 md:pb-12 space-y-6">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-6 sm:p-8 rounded-3xl shadow-xl text-center space-y-3">
-        <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center">
-          <CheckCircle className="w-10 h-10 text-white" />
+      {/* STATUS BANNER */}
+      {isPending ? (
+        /* PENDING APPROVAL BANNER */
+        <div className="bg-gradient-to-r from-[#161922] via-[#202534] to-[#161922] text-white p-6 sm:p-8 rounded-3xl shadow-2xl border-2 border-amber-500/50 text-center space-y-3 relative overflow-hidden">
+          <div className="w-16 h-16 bg-amber-500/15 border border-amber-500/40 rounded-2xl mx-auto flex items-center justify-center animate-pulse">
+            <Clock className="w-9 h-9 text-amber-400" />
+          </div>
+          <div className="inline-block bg-amber-500/20 px-3 py-1 rounded-full text-xs font-black uppercase text-amber-300 border border-amber-500/30">
+            Trạng Thái: Chờ Quán Duyệt Đơn
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">
+            Đang Chờ Quán Xác Nhận Đơn Hàng...
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+            Đơn của Quý khách đã được gửi tới Quản trị viên Bếp Việt. Đơn chỉ được tính là{' '}
+            <strong className="text-amber-300">"Đặt Đơn Thành Công"</strong> ngay khi chủ quán bấm{' '}
+            <strong className="text-emerald-400">Xác Nhận</strong>.
+          </p>
+          <div className="pt-2 flex items-center justify-center gap-2 text-xs font-mono font-bold text-amber-300">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <span>Mã Đơn: {order?.order_code || `ORD-${order?.id}`}</span>
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black">Đặt Món Thành Công!</h1>
-        <p className="text-xs sm:text-sm text-emerald-100 max-w-md mx-auto">
-          Cảm ơn bạn! Bếp Việt đã nhận được đơn hàng và đang chuẩn bị những món ăn nóng sốt nhất.
-        </p>
-        <div className="inline-block bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-mono font-bold tracking-wider">
-          Mã Đơn: {order?.order_code || `ORD-${order?.id}`}
+      ) : isCancelled ? (
+        /* CANCELLED BANNER */
+        <div className="bg-rose-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl text-center space-y-3 border border-rose-800">
+          <div className="w-16 h-16 bg-rose-500/20 rounded-2xl mx-auto flex items-center justify-center">
+            <AlertCircle className="w-9 h-9 text-rose-400" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black">Đơn Hàng Đã Bị Hủy</h1>
+          <p className="text-xs sm:text-sm text-rose-200">
+            Đơn hàng #{order?.order_code} đã được hủy. Quý khách vui lòng liên hệ hotline 0353859726 nếu cần hỗ trợ.
+          </p>
         </div>
-      </div>
+      ) : (
+        /* CONFIRMED & SUCCESS BANNER */
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white p-6 sm:p-8 rounded-3xl shadow-2xl text-center space-y-3 relative overflow-hidden">
+          <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center animate-scale-up">
+            <CheckCircle className="w-10 h-10 text-white" />
+          </div>
+          <div className="inline-block bg-black/20 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-black uppercase text-emerald-200">
+            🎉 Đã Xác Nhận Thành Công
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black">
+            Quán Đã Xác Nhận Đơn Hàng Thành Công!
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100 max-w-lg mx-auto">
+            Bếp Việt Gourmet đã duyệt đơn và đang chuẩn bị những phần Mì Indomie nóng hổi nhất cho Quý khách tại Hà Nội!
+          </p>
+          <div className="inline-block bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-mono font-bold tracking-wider">
+            Mã Đơn: {order?.order_code || `ORD-${order?.id}`}
+          </div>
+        </div>
+      )}
 
-      {/* Real-time Order Tracking Stepper */}
+      {/* 5-STEP LIVE TRACKING STEPPER */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-base text-slate-900">Tiến Trình Đơn Hàng</h3>
-            <p className="text-xs text-slate-400">Trạng thái được cập nhật trực tiếp theo thời gian thực</p>
+            <p className="text-xs text-slate-400">Trực tiếp theo dõi tiến độ từ bếp tới cửa nhà bạn</p>
           </div>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-orange-100 text-orange-700 uppercase">
-            {order?.status === 'pending' && 'Chờ tiếp nhận'}
-            {order?.status === 'preparing' && 'Bếp đang nấu'}
-            {order?.status === 'delivering' && 'Shipper đang giao'}
-            {order?.status === 'completed' && 'Đã hoàn thành'}
-            {order?.status === 'cancelled' && 'Đã hủy'}
+          <span
+            className={`text-xs font-black px-3 py-1 rounded-full uppercase ${
+              isPending
+                ? 'bg-amber-100 text-amber-700 animate-pulse'
+                : isConfirmed
+                ? 'bg-emerald-100 text-emerald-700'
+                : order?.status === 'preparing'
+                ? 'bg-orange-100 text-orange-700'
+                : order?.status === 'delivering'
+                ? 'bg-sky-100 text-sky-700'
+                : order?.status === 'completed'
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-rose-100 text-rose-700'
+            }`}
+          >
+            {isPending && 'Chờ Quán Duyệt'}
+            {isConfirmed && 'Đã Xác Nhận'}
+            {order?.status === 'preparing' && 'Bếp Đang Nấu'}
+            {order?.status === 'delivering' && 'Shipper Đang Giao'}
+            {order?.status === 'completed' && 'Giao Xong'}
+            {isCancelled && 'Đã Hủy'}
           </span>
         </div>
 
-        {/* Stepper bar */}
-        <div className="grid grid-cols-4 gap-2 relative">
-          {/* Step 1 */}
-          <div className="flex flex-col items-center text-center space-y-2">
+        {/* Stepper bar (5 steps) */}
+        <div className="grid grid-cols-5 gap-1.5 text-center">
+          {/* Step 1: Chờ Duyệt */}
+          <div className="flex flex-col items-center space-y-1.5">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
                 currentStep >= 1
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
-              <Clock className="w-5 h-5" />
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">Đã Nhận</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+              1. Chờ Duyệt
+            </span>
           </div>
 
-          {/* Step 2 */}
-          <div className="flex flex-col items-center text-center space-y-2">
+          {/* Step 2: Quán Xác Nhận */}
+          <div className="flex flex-col items-center space-y-1.5">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
                 currentStep >= 2
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
-              <ChefHat className="w-5 h-5" />
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">Đang Nấu</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+              2. Xác Nhận
+            </span>
           </div>
 
-          {/* Step 3 */}
-          <div className="flex flex-col items-center text-center space-y-2">
+          {/* Step 3: Đang Nấu */}
+          <div className="flex flex-col items-center space-y-1.5">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
                 currentStep >= 3
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
-              <Bike className="w-5 h-5" />
+              <ChefHat className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">Đang Giao</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+              3. Đang Nấu
+            </span>
           </div>
 
-          {/* Step 4 */}
-          <div className="flex flex-col items-center text-center space-y-2">
+          {/* Step 4: Đang Giao HN */}
+          <div className="flex flex-col items-center space-y-1.5">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center transition ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
                 currentStep >= 4
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
                   : 'bg-slate-100 text-slate-400'
               }`}
             >
-              <PackageCheck className="w-5 h-5" />
+              <Bike className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-[11px] font-bold text-slate-700">Giao Xong</span>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+              4. Đang Giao
+            </span>
+          </div>
+
+          {/* Step 5: Giao Xong */}
+          <div className="flex flex-col items-center space-y-1.5">
+            <div
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
+                currentStep >= 5
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-slate-100 text-slate-400'
+              }`}
+            >
+              <PackageCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+              5. Thành Công
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Order Details & Delivery Info */}
+      {/* ORDER DETAILS */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-5">
         <h3 className="font-extrabold text-base text-slate-900 pb-3 border-b border-slate-100">
           Chi Tiết Đơn Hàng & Người Nhận
@@ -196,7 +316,7 @@ export default function OrderSuccess() {
             <strong className="text-slate-800 text-sm">{order?.customer_phone}</strong>
           </div>
           <div className="sm:col-span-2">
-            <span className="text-slate-400 block mb-0.5">Địa chỉ giao hàng:</span>
+            <span className="text-slate-400 block mb-0.5">Địa chỉ giao (Nội thành Hà Nội):</span>
             <strong className="text-slate-800 text-sm leading-relaxed">
               {order?.delivery_address}
             </strong>
@@ -243,37 +363,51 @@ export default function OrderSuccess() {
             </div>
             {order?.discount > 0 && (
               <div className="flex justify-between text-emerald-600">
-                <span>Giảm giá:</span>
+                <span>Voucher giảm giá:</span>
                 <span>-{formatVND(order.discount)}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span>Phí giao hàng:</span>
+              <span>Phí ship nội thành Hà Nội:</span>
               <span>{order?.delivery_fee === 0 ? 'Miễn phí' : formatVND(order?.delivery_fee)}</span>
             </div>
             <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-100">
               <span>Tổng thanh toán ({order?.payment_method}):</span>
-              <span className="text-base text-orange-600">{formatVND(order?.total_amount)}</span>
+              <span className="text-base text-amber-600 font-black">{formatVND(order?.total_amount)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* ACTION BUTTONS & HOTLINE */}
       <div className="flex flex-col sm:flex-row gap-3">
         <button
-          onClick={() => setIsChatOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-sm border border-orange-200 transition"
+          onClick={() => {
+            if (!user) {
+              setIsAuthModalOpen(true);
+            } else {
+              setIsChatOpen(true);
+            }
+          }}
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-sm border border-amber-200 transition"
         >
           <MessageCircle className="w-4 h-4" />
-          <span>Chat Ngay Với Quán</span>
+          <span>Chat Ngay Với Chủ Quán</span>
         </button>
+
+        <a
+          href="tel:0353859726"
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-[#0D0F17] hover:bg-[#161922] text-amber-300 font-bold text-sm border border-amber-500/30 transition"
+        >
+          <Phone className="w-4 h-4" />
+          <span>Hotline: 0353859726</span>
+        </a>
 
         <Link
           to="/orders"
           className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition"
         >
-          <span>Xem Lịch Sử Đơn Hàng</span>
+          <span>Xem Lịch Sử Đơn</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>

@@ -33,7 +33,8 @@ router.post('/', async (req, res) => {
       note,
       items,
       payment_method,
-      discount = 0
+      discount = 0,
+      coupon_code
     } = req.body;
 
     // Validate Customer Name
@@ -107,6 +108,9 @@ router.post('/', async (req, res) => {
       fullAddress = `${fullAddress}, ${ward.trim()}`;
     }
 
+    // Support coupon code in note
+    const finalNote = coupon_code ? `[Mã giảm giá: ${coupon_code.toUpperCase()}] ${note ? note.trim() : ''}`.trim() : (note ? note.trim() : '');
+
     // Find or link user
     let { data: user } = await supabase
       .from('users')
@@ -122,8 +126,8 @@ router.post('/', async (req, res) => {
           phone: normalizedPhone,
           name: customer_name.trim(),
           address: fullAddress,
-          province: province || 'Hồ Chí Minh',
-          district: district || '',
+          province: province || 'Hà Nội',
+          district: district || 'Quận Hoàn Kiếm',
           ward: ward || '',
           role: 'customer'
         })
@@ -133,7 +137,7 @@ router.post('/', async (req, res) => {
       if (newUser) userId = newUser.id;
     }
 
-    // Insert order (Supabase orders table has no ward column; ward is preserved in delivery_address)
+    // Insert order (Initial status: 'pending' - Chờ chủ quán duyệt và xác nhận)
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .insert({
@@ -142,9 +146,9 @@ router.post('/', async (req, res) => {
         customer_name: customer_name.trim(),
         customer_phone: normalizedPhone,
         delivery_address: fullAddress,
-        province: province || 'Hồ Chí Minh',
-        district: district || '',
-        note: note ? note.trim() : '',
+        province: province || 'Hà Nội',
+        district: district || 'Quận Hoàn Kiếm',
+        note: finalNote,
         subtotal,
         discount: Number(discount) || 0,
         delivery_fee,
@@ -348,6 +352,50 @@ router.patch('/:id/status', async (req, res) => {
     return res.json({
       success: true,
       message: 'Cập nhật trạng thái đơn hàng thành công!',
+      order: orderFormatted
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/orders/:id/confirm - Admin explicitly confirms an order
+router.patch('/:id/confirm', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!supabase) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({
+        status: 'confirmed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
+
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Đơn hàng không tồn tại' });
+    }
+
+    const orderFormatted = {
+      ...updated,
+      items: updated.order_items || []
+    };
+
+    // Broadcast order_confirmed & order_status_updated to customer and admin
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', orderFormatted);
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_confirmed', orderFormatted);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Đã xác nhận đơn hàng thành công! Quán bắt đầu nấu món.',
       order: orderFormatted
     });
   } catch (error) {

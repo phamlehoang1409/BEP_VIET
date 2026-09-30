@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { validateCoupon } from '../api';
 
 const CartContext = createContext();
 
@@ -67,39 +68,63 @@ export function CartProvider({ children }) {
     0
   );
 
-  // Delivery fee: 15.000 VND, or free if subtotal >= 250.000 VND
-  const deliveryFee = subtotal >= 250000 || subtotal === 0 ? 0 : 15000;
+  // Hanoi inner city delivery fee: 15.000 VND, free if subtotal >= 200.000 VND
+  const deliveryFee = subtotal >= 200000 || subtotal === 0 ? 0 : 15000;
 
-  // Apply promo vouchers
-  const applyPromo = (code) => {
+  // Apply promo vouchers using backend validation
+  const applyPromo = async (code) => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
+      setPromoCode('');
       setDiscount(0);
       setPromoMessage('');
-      return;
+      return { success: false, message: 'Vui lòng nhập mã giảm giá' };
     }
 
-    if (cleanCode === 'BEPVIET20') {
-      if (subtotal < 100000) {
-        setPromoMessage('Mã BEPVIET20 chỉ áp dụng cho đơn từ 100.000 ₫');
-        setDiscount(0);
+    try {
+      const res = await validateCoupon(cleanCode, subtotal);
+      if (res.success) {
+        setPromoCode(cleanCode);
+        setDiscount(res.discount_amount || 0);
+        setPromoMessage(res.message || `Đã áp dụng mã ${cleanCode}!`);
+        return { success: true, discount: res.discount_amount };
       } else {
-        setPromoCode('BEPVIET20');
-        setDiscount(20000);
-        setPromoMessage('Đã áp dụng mã giảm 20.000 ₫ thành công!');
+        setDiscount(0);
+        setPromoMessage(res.error || 'Mã không hợp lệ');
+        return { success: false, message: res.error };
       }
-    } else if (cleanCode === 'GIAM10') {
-      setPromoCode('GIAM10');
-      const disc = Math.round(subtotal * 0.1);
-      setDiscount(disc);
-      setPromoMessage(`Đã áp dụng giảm 10% (-${disc.toLocaleString('vi-VN')} ₫)!`);
-    } else if (cleanCode === 'FREESHIP') {
-      setPromoCode('FREESHIP');
-      setDiscount(15000);
-      setPromoMessage('Đã áp dụng mã Miễn phí vận chuyển (trừ 15.000 ₫)!');
-    } else {
-      setPromoMessage('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+    } catch (err) {
+      // Offline fallback checks for default codes
+      if (cleanCode === 'INDOMIE20') {
+        if (subtotal < 80000) {
+          setDiscount(0);
+          setPromoMessage('Mã INDOMIE20 áp dụng cho đơn từ 80.000 ₫');
+          return { success: false, message: 'Đơn hàng chưa đạt mức tối thiểu' };
+        }
+        const disc = Math.min(50000, Math.round(subtotal * 0.2));
+        setPromoCode('INDOMIE20');
+        setDiscount(disc);
+        setPromoMessage(`Đã áp dụng giảm 20% (-${disc.toLocaleString('vi-VN')} ₫)!`);
+        return { success: true, discount: disc };
+      }
+      if (cleanCode === 'HANOI15K') {
+        const disc = 15000;
+        setPromoCode('HANOI15K');
+        setDiscount(disc);
+        setPromoMessage('Đã trừ 15.000 ₫ phí ship nội thành Hà Nội!');
+        return { success: true, discount: disc };
+      }
+      if (cleanCode === 'BEPVIETVIP') {
+        const disc = Math.min(100000, Math.round(subtotal * 0.25));
+        setPromoCode('BEPVIETVIP');
+        setDiscount(disc);
+        setPromoMessage(`Đã áp dụng giảm 25% VIP (-${disc.toLocaleString('vi-VN')} ₫)!`);
+        return { success: true, discount: disc };
+      }
+
       setDiscount(0);
+      setPromoMessage(err.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn.');
+      return { success: false, message: err.message };
     }
   };
 

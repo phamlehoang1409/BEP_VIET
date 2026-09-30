@@ -227,6 +227,40 @@ export const updateOrderStatus = (id, status) =>
     body: JSON.stringify({ status })
   });
 
+export const confirmOrder = (id) =>
+  request(`/orders/${id}/confirm`, {
+    method: 'PATCH'
+  });
+
+// --- Store Settings API ---
+export const getStoreSettings = () => request('/settings');
+
+export const updateStoreSettings = (data) =>
+  request('/settings', {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+
+// --- Coupons API ---
+export const getCoupons = (params = {}) => request(`/coupons${buildQueryString(params)}`);
+
+export const validateCoupon = (code, subtotal) =>
+  request('/coupons/validate', {
+    method: 'POST',
+    body: JSON.stringify({ code, subtotal })
+  });
+
+export const createCoupon = (data) =>
+  request('/coupons', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+
+export const deleteCoupon = (code) =>
+  request(`/coupons/${code}`, {
+    method: 'DELETE'
+  });
+
 // --- Auth API ---
 export const requestOtp = (phone) =>
   request('/auth/request-otp', {
