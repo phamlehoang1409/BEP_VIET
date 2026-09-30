@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
@@ -15,12 +15,6 @@ import {
   CheckCircle2,
   Sparkles,
   Tag,
-  Crosshair,
-  Compass,
-  ExternalLink,
-  Navigation,
-  Building2,
-  Search,
   Check
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -29,12 +23,8 @@ import { useToast } from '../components/Toast';
 import {
   formatVND,
   validateVietnamPhone,
-  validateDeliveryAddress,
   HANOI_INNER_DISTRICTS,
-  HANOI_DISTRICT_WARDS,
-  HANOI_POPULAR_LOCATIONS,
-  searchHanoiLocations,
-  reverseGeocodeHanoi
+  HANOI_DISTRICT_WARDS
 } from '../utils/vietnamData';
 import { placeOrder, getCoupons } from '../api';
 
@@ -64,14 +54,6 @@ export default function Checkout() {
   const [ward, setWard] = useState(user?.ward || 'Phường Hàng Bạc');
   const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
-
-  // Location suggestions & GPS states
-  const [locating, setLocating] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
-  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isGpsLocated, setIsGpsLocated] = useState(false);
-  const suggestionBoxRef = useRef(null);
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -143,103 +125,6 @@ export default function Checkout() {
     }
   };
 
-  // Live address search suggestions debounced
-  useEffect(() => {
-    if (!streetAddress || streetAddress.trim().length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setIsSearchingSuggestions(true);
-      try {
-        const results = await searchHanoiLocations(streetAddress);
-        setSuggestions(results);
-      } catch (e) {
-        setSuggestions([]);
-      } finally {
-        setIsSearchingSuggestions(false);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [streetAddress]);
-
-  // Click outside listener to close autocomplete dropdown
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (suggestionBoxRef.current && !suggestionBoxRef.current.contains(e.target)) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSelectLocation = (loc) => {
-    setStreetAddress(loc.name || loc.address);
-    if (loc.district && HANOI_INNER_DISTRICTS.includes(loc.district)) {
-      setDistrict(loc.district);
-      const newWards = HANOI_DISTRICT_WARDS[loc.district] || [];
-      setWards(newWards);
-      if (loc.ward && newWards.includes(loc.ward)) {
-        setWard(loc.ward);
-      } else if (newWards.length > 0) {
-        setWard(newWards[0]);
-      }
-    }
-    setShowSuggestions(false);
-    setIsGpsLocated(false);
-    if (errors.address) setErrors({ ...errors, address: null });
-    showToast(`Đã chọn: ${loc.name} (${loc.district})`, 'success');
-  };
-
-  const handleGetGpsLocation = () => {
-    if (!navigator.geolocation) {
-      showToast('Trình duyệt không hỗ trợ định vị GPS!', 'error');
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        try {
-          const res = await reverseGeocodeHanoi(latitude, longitude);
-          if (res) {
-            setStreetAddress(res.streetAddress);
-            if (HANOI_INNER_DISTRICTS.includes(res.district)) {
-              setDistrict(res.district);
-              const newWards = HANOI_DISTRICT_WARDS[res.district] || [];
-              setWards(newWards);
-              if (res.ward && newWards.includes(res.ward)) {
-                setWard(res.ward);
-              } else if (newWards.length > 0) {
-                setWard(newWards[0]);
-              }
-            }
-            setIsGpsLocated(true);
-            setShowSuggestions(false);
-            if (errors.address) setErrors({ ...errors, address: null });
-            showToast('Đã định vị thành công vị trí của bạn tại Hà Nội! 🎯', 'success', 4000);
-          } else {
-            showToast('Đã lấy tọa độ GPS. Vui lòng kiểm tra lại số nhà, tên đường.', 'info');
-          }
-        } catch (e) {
-          showToast('Không thể giải mã địa chỉ từ GPS. Vui lòng chọn địa chỉ bên dưới.', 'error');
-        } finally {
-          setLocating(false);
-        }
-      },
-      (err) => {
-        setLocating(false);
-        if (err.code === 1) {
-          showToast('Vui lòng bật quyền truy cập vị trí trên trình duyệt để lấy GPS tự động!', 'error');
-        } else {
-          showToast('Không thể lấy vị trí hiện tại. Vui lòng gõ tên đường hoặc chọn địa điểm.', 'error');
-        }
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
-  };
-
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     const newErrors = {};
@@ -255,10 +140,9 @@ export default function Checkout() {
       newErrors.phone = phoneVal.error;
     }
 
-    // Validate Address strictly against nonsense, fake words, or out-of-boundary
-    const addressVal = validateDeliveryAddress(streetAddress, 'Hà Nội', district, ward);
-    if (!addressVal.isValid) {
-      newErrors.address = addressVal.error;
+    // Simple, reliable address validation
+    if (!streetAddress || streetAddress.trim().length < 2) {
+      newErrors.address = 'Vui lòng nhập địa chỉ nhận hàng (số nhà, tên đường, ngõ ngách...)';
     }
 
     if (cartItems.length === 0) {
@@ -416,43 +300,29 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Delivery Address (Hà Nội Inner City - Google Maps & GPS Integration) */}
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-600 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2 flex-wrap">
-                      <span>2. Địa Chỉ Giao Hàng Chuẩn Hóa</span>
-                      <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                        Nội Thành Hà Nội
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-400">Định vị GPS hoặc tìm kiếm địa chỉ liên kết Google Maps</p>
-                  </div>
+            {/* Section 2: Delivery Address */}
+            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-600 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
+                  <MapPin className="w-5 h-5" />
                 </div>
-
-                {/* GPS Current Location Button */}
-                <button
-                  type="button"
-                  onClick={handleGetGpsLocation}
-                  disabled={locating}
-                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold border border-amber-300 transition shadow-xs active:scale-95 disabled:opacity-50 shrink-0"
-                  title="Tự động lấy vị trí hiện tại của bạn qua GPS"
-                >
-                  <Crosshair className={`w-4 h-4 text-amber-600 ${locating ? 'animate-spin' : ''}`} />
-                  <span>{locating ? 'Đang định vị GPS...' : '📍 Lấy Vị Trí Của Tôi'}</span>
-                </button>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                    <span>2. Địa Chỉ Giao Hàng</span>
+                    <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                      Hà Nội
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">Giao hàng hỏa tốc tận nơi cho Quý khách</p>
+                </div>
               </div>
 
               {/* District & Ward selector */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* District */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center justify-between">
-                    <span>Quận (12 Quận Nội Thành) <span className="text-rose-500">*</span></span>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                    Quận / Huyện <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={district}
@@ -470,7 +340,7 @@ export default function Checkout() {
                 {/* Ward */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
-                    Phường / Xã <span className="text-rose-500">*</span>
+                    Phường / Xã
                   </label>
                   <select
                     value={ward}
@@ -486,43 +356,27 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* Street Address Input with Smart Autocomplete */}
-              <div className="relative" ref={suggestionBoxRef}>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5 flex items-center justify-between flex-wrap gap-1">
-                  <span>Số nhà, Tên Đường, Tòa nhà, Chung cư <span className="text-rose-500">*</span></span>
-                  <span className="text-[10px] text-slate-400 font-normal">
-                    (Gõ tên tòa nhà / đường để có gợi ý Maps)
-                  </span>
+              {/* Street Address Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  Số nhà, Tên Đường, Tòa nhà, Chung cư <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="VD: Số 12 Hàng Bạc, Keangnam Landmark 72, Royal City, Times City..."
+                    placeholder="VD: Ngõ 131 Thái Hà, Số 12 Hàng Bạc, Chung cư Royal City..."
                     value={streetAddress}
-                    onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                     onChange={(e) => {
                       setStreetAddress(e.target.value);
-                      setShowSuggestions(true);
                       if (errors.address) setErrors({ ...errors, address: null });
                     }}
-                    className={`w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border text-sm font-semibold outline-none transition ${
+                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border text-sm font-semibold outline-none transition ${
                       errors.address
                         ? 'border-rose-400 bg-rose-50/20'
                         : 'border-slate-200 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-100'
                     }`}
                   />
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                  {isSearchingSuggestions ? (
-                    <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin absolute right-3.5 top-3.5" />
-                  ) : streetAddress ? (
-                    <button
-                      type="button"
-                      onClick={() => { setStreetAddress(''); setSuggestions([]); }}
-                      className="text-slate-400 hover:text-slate-600 absolute right-3.5 top-3.5 text-xs font-bold"
-                    >
-                      ✕
-                    </button>
-                  ) : null}
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 </div>
 
                 {errors.address && (
@@ -531,115 +385,7 @@ export default function Checkout() {
                     <span>{errors.address}</span>
                   </p>
                 )}
-
-                {/* Autocomplete Suggestions Dropdown */}
-                {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-amber-300 shadow-2xl z-30 overflow-hidden divide-y divide-slate-100 animate-slide-up">
-                    <div className="p-2.5 bg-amber-50/80 border-b border-amber-200/60 flex items-center justify-between text-[11px] text-amber-900 font-bold">
-                      <span className="flex items-center gap-1">
-                        <Compass className="w-3.5 h-3.5 text-amber-600" /> Gợi ý vị trí Google Maps / Hà Nội:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowSuggestions(false)}
-                        className="text-slate-400 hover:text-slate-600 text-[10px]"
-                      >
-                        Đóng ✕
-                      </button>
-                    </div>
-
-                    <div className="max-h-56 overflow-y-auto">
-                      {suggestions.map((item, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleSelectLocation(item)}
-                          className="w-full text-left p-3 hover:bg-amber-50/80 transition flex items-start gap-2.5 group"
-                        >
-                          <MapPin className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 group-hover:scale-110 transition" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="font-bold text-xs text-slate-800 truncate group-hover:text-amber-700">
-                                {item.name}
-                              </p>
-                              {item.type && (
-                                <span className="text-[9px] font-black uppercase bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full shrink-0">
-                                  {item.type}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                              {item.ward ? `${item.ward}, ` : ''}{item.district}, Hà Nội
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-
-              {/* Popular Hanoi Landmarks Quick Pills */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Điểm nhận hàng phổ biến (Bấm để chọn nhanh):
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: 'Keangnam 72', loc: HANOI_POPULAR_LOCATIONS[0] },
-                    { label: 'Royal City', loc: HANOI_POPULAR_LOCATIONS[4] },
-                    { label: 'Times City', loc: HANOI_POPULAR_LOCATIONS[3] },
-                    { label: 'Lotte Liễu Giai', loc: HANOI_POPULAR_LOCATIONS[1] },
-                    { label: 'ĐH Bách Khoa', loc: HANOI_POPULAR_LOCATIONS[14] },
-                    { label: 'ĐH Ngoại Thương', loc: HANOI_POPULAR_LOCATIONS[17] },
-                    { label: 'Hồ Hoàn Kiếm', loc: HANOI_POPULAR_LOCATIONS[29] },
-                    { label: 'Smart City', loc: HANOI_POPULAR_LOCATIONS[5] }
-                  ].map(({ label, loc }, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleSelectLocation(loc)}
-                      className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-amber-100 hover:text-amber-800 text-slate-600 text-[11px] font-semibold transition border border-slate-200/80 hover:border-amber-300"
-                    >
-                      📍 {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Google Maps Verified Preview Card */}
-              {streetAddress && streetAddress.trim().length >= 4 && (
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-amber-50/80 border border-amber-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-                      <Navigation className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 font-black text-slate-800 flex-wrap">
-                        <span>Địa Chỉ Giao Hàng Đã Chuẩn Hóa:</span>
-                        {isGpsLocated && (
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
-                            GPS Xác Thực
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-600 font-medium mt-0.5 line-clamp-2">
-                        {streetAddress.trim()}, {ward}, {district}, Hà Nội
-                      </p>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${streetAddress.trim()}, ${ward}, ${district}, Hà Nội`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-amber-700 hover:text-amber-800 font-bold text-xs border border-amber-300 shadow-xs transition shrink-0 active:scale-95"
-                  >
-                    <span>🗺️ Mở Trên Google Maps</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-amber-600" />
-                  </a>
-                </div>
-              )}
 
               {/* Note */}
               <div>

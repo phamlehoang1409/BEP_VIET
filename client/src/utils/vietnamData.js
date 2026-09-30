@@ -148,98 +148,20 @@ export const HANOI_POPULAR_LOCATIONS = [
 ];
 
 /**
- * Validates complete delivery address with strict checks against nonsense/gibberish
+ * Validates delivery address
  * @param {string} streetAddress
- * @param {string} province
- * @param {string} district
+ * @param {string} [province]
+ * @param {string} [district]
  * @param {string} [ward]
  * @returns {{ isValid: boolean, error?: string }}
  */
 export function validateDeliveryAddress(streetAddress, province, district, ward) {
-  if (!streetAddress || typeof streetAddress !== 'string') {
+  if (!streetAddress || typeof streetAddress !== 'string' || streetAddress.trim().length < 2) {
     return {
       isValid: false,
-      error: 'Vui lòng nhập số nhà, tên đường hoặc tòa nhà cụ thể tại Hà Nội!'
+      error: 'Vui lòng nhập địa chỉ nhận hàng cụ thể (số nhà, tên đường, tòa nhà...)'
     };
   }
-
-  const cleaned = streetAddress.trim();
-
-  // 1. Minimum and maximum length
-  if (cleaned.length < 8) {
-    return {
-      isValid: false,
-      error: 'Địa chỉ quá ngắn (tối thiểu 8 ký tự)! Vui lòng ghi rõ số nhà, ngõ/ngách hoặc tên tòa nhà.'
-    };
-  }
-  if (cleaned.length > 180) {
-    return {
-      isValid: false,
-      error: 'Địa chỉ quá dài (tối đa 180 ký tự)! Vui lòng rút gọn thông tin trọng tâm.'
-    };
-  }
-
-  // 2. Chống nhập chuỗi ký tự lặp vô nghĩa (vd: aaaaaa, 111111, xxxxx)
-  if (/(.)\1{3,}/.test(cleaned)) {
-    return {
-      isValid: false,
-      error: 'Địa chỉ chứa ký tự lặp lại bất thường! Vui lòng nhập địa chỉ có thật để shipper giao hàng.'
-    };
-  }
-
-  // 3. Chống nhập từ ngữ linh tinh, giả mạo, test, spam
-  const blacklistedKeywords = [
-    'linh tinh', 'lung tung', 'khong co', 'chua co', 'khong biet', 'chua biet',
-    'test', 'demo', 'asdf', 'qwerty', 'zxcv', '12345', '123456', '11111',
-    'aaaaa', 'hahaha', 'hehehe', 'hihihi', 'dau cung duoc', 'tuy quan',
-    'ko co', 'hong co', 'fake', 'abcde', 'qwer', 'đâu cũng được', 'tùy quán'
-  ];
-  const lower = cleaned.toLowerCase();
-  for (const word of blacklistedKeywords) {
-    if (lower.includes(word)) {
-      return {
-        isValid: false,
-        error: `Địa chỉ không hợp lệ (phát hiện từ khóa không rõ ràng: "${word}")! Vui lòng nhập số nhà, tên đường cụ thể.`
-      };
-    }
-  }
-
-  // 4. Kiểm tra cấu trúc từ hợp lệ (ít nhất 2 từ)
-  const words = cleaned.split(/\s+/).filter(Boolean);
-  if (words.length < 2) {
-    return {
-      isValid: false,
-      error: 'Địa chỉ phải có ít nhất 2 từ (Ví dụ: "Số 12 Hàng Bạc" hoặc "Chung cư Royal City")!'
-    };
-  }
-
-  // 5. Phải chứa nguyên âm tiếng Việt/Latin (chống gõ linh tinh chuỗi phụ âm kiểu "sdfghjk")
-  if (!/[aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(cleaned)) {
-    return {
-      isValid: false,
-      error: 'Địa chỉ không hợp lệ! Vui lòng nhập tên đường, tòa nhà có nghĩa.'
-    };
-  }
-
-  // 6. Kiểm tra Quận nội thành Hà Nội
-  if (!district || !HANOI_INNER_DISTRICTS.includes(district)) {
-    return {
-      isValid: false,
-      error: 'Quán hiện chỉ giao hàng trong 12 Quận nội thành Hà Nội. Vui lòng chọn Quận hợp lệ!'
-    };
-  }
-
-  // 7. Kiểm tra Phường thuộc Quận nếu có
-  if (ward && HANOI_DISTRICT_WARDS[district]) {
-    const validWards = HANOI_DISTRICT_WARDS[district];
-    if (validWards.length > 0 && !validWards.includes(ward)) {
-      return {
-        isValid: false,
-        error: `Phường/Xã "${ward}" không thuộc ${district}! Vui lòng chọn lại phường tương ứng.`
-      };
-    }
-  }
-
   return { isValid: true };
 }
 
