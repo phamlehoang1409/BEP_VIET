@@ -1,5 +1,5 @@
-// Service Worker with Network-First strategy and cache self-healing
-const CACHE_NAME = 'bepviet-pwa-v5';
+// Service Worker with Network-Only strategy and cache cleanup
+const CACHE_NAME = 'bepviet-pwa-v10';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -13,8 +13,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Always use network directly for all requests
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
+  // Always fetch directly from network to ensure 100% fresh code
+  event.respondWith(fetch(event.request));
 });

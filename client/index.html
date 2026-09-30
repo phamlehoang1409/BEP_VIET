@@ -22,10 +22,10 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Automatic Service Worker cleanup and registration
+      // Automatic Service Worker cleanup and registration with cache busting
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
+          navigator.serviceWorker.register('/sw.js?t=' + Date.now()).then((reg) => {
             reg.update();
           }).catch(err => {
             console.log('SW registration error:', err);
