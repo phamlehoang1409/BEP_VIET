@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 
 // Providers
 import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { ChatProvider } from './context/ChatContext';
 import { ToastProvider } from './components/Toast';
 
@@ -77,6 +77,8 @@ class ErrorBoundary extends React.Component {
 
 // Customer Layout Shell
 function CustomerLayout() {
+  const { storeSettings } = useCart();
+
   return (
     <ChatProvider>
       <div className="min-h-screen flex flex-col bg-[#FAF8F5]">
@@ -95,19 +97,31 @@ function CustomerLayout() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-xl">🍜</span>
-              <span className="font-black text-sm text-amber-300">Bếp Việt Gourmet</span>
+              <span className="font-black text-sm text-amber-300">
+                {storeSettings?.store_name || 'Bếp Việt Gourmet'}
+              </span>
               <span className="text-slate-500">• Đỉnh Cao Mì Indomie Thượng Hạng</span>
             </div>
             <div className="flex items-center gap-6">
-              <a href="tel:0353859726" className="text-amber-400 font-bold hover:underline flex items-center gap-1.5">
-                <span>📞 Hotline:</span> 0353859726
+              <a
+                href={`tel:${storeSettings?.hotline || '0353859726'}`}
+                className="text-amber-400 font-bold hover:underline flex items-center gap-1.5"
+              >
+                <span>📞 Hotline:</span> {storeSettings?.hotline || '0353859726'}
               </a>
-              <span>Mở cửa: 08:00 - 23:00</span>
+              <span>
+                Mở cửa: {storeSettings?.open_time || '08:00'} - {storeSettings?.close_time || '23:00'}
+              </span>
               <span className="text-amber-400 font-bold bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/20">
-                🚀 Giao hỏa tốc Nội thành Hà Nội
+                🚀 {storeSettings?.delivery_area || 'Giao hỏa tốc Nội thành Hà Nội'}
               </span>
             </div>
           </div>
+          {storeSettings?.address && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 text-center sm:text-right text-[11px] text-slate-500">
+              📍 Địa chỉ: {storeSettings.address}
+            </div>
+          )}
         </footer>
       </div>
     </ChatProvider>

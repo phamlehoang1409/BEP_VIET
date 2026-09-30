@@ -9,26 +9,10 @@ import { getStoreSettings } from '../api';
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { itemCount, subtotal, setIsCartOpen } = useCart();
+  const { itemCount, subtotal, setIsCartOpen, storeSettings } = useCart();
   const { user, logout, setIsAuthModalOpen, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdown, setUserDropdown] = useState(false);
-  const [storeSettings, setStoreSettings] = useState({
-    is_currently_open: true,
-    opening_time: '08:00',
-    closing_time: '23:00',
-    hotline: '0353859726'
-  });
-
-  useEffect(() => {
-    getStoreSettings()
-      .then((res) => {
-        if (res.success && res.settings) {
-          setStoreSettings(res.settings);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -41,37 +25,45 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-[#0D0F17]/95 backdrop-blur-md border-b border-amber-500/20 text-white transition-all duration-300">
-      {/* Top micro bar: Store Status + Hotline + Hanoi Inner Scope */}
+      {/* Top micro bar: Store Status + Hotline + Delivery Area */}
       <div className="bg-[#08090E] border-b border-amber-500/10 py-1.5 px-4 sm:px-6 lg:px-8 text-[11px] text-slate-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span
               className={`w-2 h-2 rounded-full ${
-                storeSettings.is_currently_open ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                storeSettings?.is_currently_open ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
               }`}
             />
             <span className="font-semibold text-slate-300">
-              {storeSettings.is_currently_open
-                ? `Đang Mở Cửa (${storeSettings.opening_time} - ${storeSettings.closing_time})`
+              {storeSettings?.is_currently_open
+                ? `Đang Mở Cửa (${storeSettings?.open_time || '08:00'} - ${storeSettings?.close_time || '23:00'})`
                 : 'Tạm Nghỉ'}
             </span>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="hidden sm:inline text-amber-300/90 font-medium">
-              Giao hỏa tốc 12 quận Nội thành Hà Nội
+              {storeSettings?.delivery_area || 'Giao hỏa tốc Nội thành Hà Nội'}
             </span>
           </div>
 
           <div className="flex items-center gap-4">
             <a
-              href={`tel:${storeSettings.hotline || '0353859726'}`}
+              href={`tel:${storeSettings?.hotline || '0353859726'}`}
               className="text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 transition"
             >
               <Phone className="w-3 h-3 text-amber-400" />
-              <span>Hotline: {storeSettings.hotline || '0353859726'}</span>
+              <span>Hotline: {storeSettings?.hotline || '0353859726'}</span>
             </a>
           </div>
         </div>
       </div>
+
+      {/* Optional Announcement Banner from Admin */}
+      {storeSettings?.announcement && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/20 to-amber-500/15 border-b border-amber-500/20 py-1 px-4 text-center text-xs text-amber-200 font-semibold tracking-wide flex items-center justify-center gap-2">
+          <span>📢</span>
+          <span className="truncate">{storeSettings.announcement}</span>
+        </div>
+      )}
 
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

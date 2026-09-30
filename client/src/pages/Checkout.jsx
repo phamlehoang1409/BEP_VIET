@@ -36,6 +36,7 @@ export default function Checkout() {
     deliveryFee,
     baseShippingFee,
     freeShipThreshold,
+    storeSettings,
     discount,
     promoCode,
     promoMessage,
@@ -215,14 +216,14 @@ export default function Checkout() {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
-            Giao Hàng Hỏa Tốc Nội Thành Hà Nội
+            {storeSettings?.delivery_area || 'Giao Hàng Hỏa Tốc Nội Thành Hà Nội'}
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           Xác Nhận Đơn Hàng & Giao Nhận
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Giao tận nơi 12 quận nội thành Hà Nội trong 20-30 phút. Bảo hiểm nóng sốt 100%.
+          Khu vực giao: <strong>{storeSettings?.delivery_area || 'Nội thành Hà Nội'}</strong>. Giờ nhận đơn: <strong>{storeSettings?.open_time || '08:00'} - {storeSettings?.close_time || '23:00'}</strong>. Bảo hiểm nóng sốt 100%.
         </p>
       </div>
 

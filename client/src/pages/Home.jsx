@@ -17,9 +17,11 @@ import {
 import { getFoods, getCategories } from '../api';
 import FoodCard from '../components/FoodCard';
 import FoodDetailModal from '../components/FoodDetailModal';
+import { useCart } from '../context/CartContext';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { storeSettings } = useCart();
   const [foods, setFoods] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -60,7 +62,7 @@ export default function Home() {
           <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 backdrop-blur-md text-amber-300 text-xs sm:text-sm font-bold border border-amber-500/30">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Giao Hỏa Tốc 20-30 Phút • Nội Thành Hà Nội</span>
+              <span>Giao Hỏa Tốc • {storeSettings?.delivery_area || 'Nội Thành Hà Nội'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15]">
@@ -71,7 +73,7 @@ export default function Home() {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed">
-              Trải nghiệm các tuyệt tác Mì Trộn Bò Trứng lòng đào, Xá Xíu Mật Ong quay xém cạnh, Hải Sản Sa Tế cay nồng chuẩn vị nhà hàng. Nóng giòn giao tận cửa tại Hà Nội!
+              Trải nghiệm các tuyệt tác Mì Trộn Bò Trứng lòng đào, Xá Xíu Mật Ong quay xém cạnh, Hải Sản Sa Tế cay nồng chuẩn vị nhà hàng. Nóng giòn giao tận cửa!
             </p>
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
@@ -84,11 +86,11 @@ export default function Home() {
               </Link>
 
               <a
-                href="tel:0353859726"
+                href={`tel:${storeSettings?.hotline || '0353859726'}`}
                 className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-amber-300 font-bold text-sm border border-amber-500/30 transition"
               >
                 <Phone className="w-4 h-4 text-amber-400" />
-                <span>Hotline: 0353859726</span>
+                <span>Hotline: {storeSettings?.hotline || '0353859726'}</span>
               </a>
             </div>
 
