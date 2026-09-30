@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 // Seed default coupons if none exist
 const DEFAULT_COUPONS = [
@@ -153,8 +154,8 @@ router.post('/validate', async (req, res) => {
   }
 });
 
-// POST create new coupon (Admin)
-router.post('/', async (req, res) => {
+// POST create new coupon (Admin only)
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const {
       code,
@@ -214,8 +215,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// DELETE remove coupon (Admin)
-router.delete('/:code', async (req, res) => {
+// DELETE remove coupon (Admin only)
+router.delete('/:code', requireAdmin, async (req, res) => {
   try {
     const { code } = req.params;
     const cleanCode = code.trim().toUpperCase();

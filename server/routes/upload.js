@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 // Memory storage for cloud buffer
 const upload = multer({
@@ -21,8 +22,8 @@ const upload = multer({
   }
 });
 
-// Single image upload route: Supabase Storage with local disk fallback
-router.post('/', upload.single('image'), async (req, res) => {
+// Single image upload route: Supabase Storage with local disk fallback (Admin only)
+router.post('/', requireAdmin, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Vui lòng chọn file hình ảnh để tải lên' });

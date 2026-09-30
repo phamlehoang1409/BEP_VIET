@@ -127,16 +127,18 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Admin Switch Button */}
-            <Link
-              to={isAdmin ? '/admin' : '/admin/login'}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs sm:text-sm font-bold shadow-md transition duration-200 border border-amber-500/30"
-              title="Trang Quản Trị Quán"
-            >
-              <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-              <span className="hidden sm:inline">Quản Trị Quán</span>
-              <span className="sm:hidden">Admin</span>
-            </Link>
+            {/* Admin Switch Button (Chỉ hiển thị khi đã đăng nhập Admin) */}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 text-xs sm:text-sm font-bold shadow-md transition duration-200 border border-amber-500/40"
+                title="Trang Quản Trị Quán"
+              >
+                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+                <span className="hidden sm:inline">Quản Trị Quán</span>
+                <span className="sm:hidden">Admin</span>
+              </Link>
+            )}
 
             {/* Cart Trigger */}
             <button

@@ -137,9 +137,58 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// Admin login with required password 14092006
+const { generateAdminToken, requireAdmin } = require('../middleware/authMiddleware');
+
+// In-memory rate limiting cho đăng nhập Admin để chống Brute-force
+const adminLoginAttempts = new Map(); // ip -> { count, lockedUntil }
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || '127.0.0.1';
+}
+
+function checkAdminRateLimit(ip) {
+  const now = Date.now();
+  const attempt = adminLoginAttempts.get(ip);
+  if (attempt && attempt.lockedUntil && attempt.lockedUntil > now) {
+    const remainingMinutes = Math.ceil((attempt.lockedUntil - now) / 60000);
+    return `Tài khoản quản trị tạm thời bị khóa do nhập sai mật khẩu quá 5 lần. Vui lòng thử lại sau ${remainingMinutes} phút!`;
+  }
+  return null;
+}
+
+function recordAdminFailedAttempt(ip) {
+  const now = Date.now();
+  const attempt = adminLoginAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+  attempt.count += 1;
+  if (attempt.count >= 5) {
+    attempt.lockedUntil = now + 15 * 60 * 1000; // Khóa 15 phút
+    attempt.count = 0;
+  }
+  adminLoginAttempts.set(ip, attempt);
+}
+
+function clearAdminFailedAttempts(ip) {
+  adminLoginAttempts.delete(ip);
+}
+
+// GET verify admin token
+router.get('/verify-admin', requireAdmin, (req, res) => {
+  return res.json({
+    success: true,
+    admin: req.admin,
+    message: 'Token quản trị viên hợp lệ.'
+  });
+});
+
+// Admin login with required password 14092006 (Bảo mật tối đa, chống dò mật khẩu)
 router.post('/admin-login', async (req, res) => {
   try {
+    const clientIp = getClientIp(req);
+    const lockMessage = checkAdminRateLimit(clientIp);
+    if (lockMessage) {
+      return res.status(429).json({ error: lockMessage });
+    }
+
     const { passcode } = req.body;
 
     if (!passcode) {
@@ -148,8 +197,16 @@ router.post('/admin-login', async (req, res) => {
 
     // Exact password check: 14092006
     if (passcode !== '14092006') {
-      return res.status(401).json({ error: 'Mật khẩu quản trị viên không chính xác! Vui lòng nhập đúng mật khẩu.' });
+      recordAdminFailedAttempt(clientIp);
+      const attempt = adminLoginAttempts.get(clientIp);
+      const remainingAttempts = 5 - (attempt?.count || 0);
+      return res.status(401).json({
+        error: `Mật khẩu quản trị viên không chính xác! (Còn ${remainingAttempts > 0 ? remainingAttempts : 0} lần thử trước khi bị khóa tạm thời 15 phút)`
+      });
     }
+
+    // Đăng nhập thành công -> Xóa bộ đếm lỗi
+    clearAdminFailedAttempts(clientIp);
 
     let adminUser = null;
     if (supabase) {
@@ -168,16 +225,19 @@ router.post('/admin-login', async (req, res) => {
     if (!adminUser) {
       adminUser = {
         id: 1,
-        phone: '0909999999',
+        phone: '0353859726',
         name: 'Quản Trị Viên Bếp Việt',
         role: 'admin'
       };
     }
 
+    // Tạo token HMAC SHA256 an toàn có hạn 7 ngày
+    const token = generateAdminToken(adminUser);
+
     return res.json({
       success: true,
       user: adminUser,
-      token: 'admin-authenticated-token-14092006',
+      token,
       message: 'Đăng nhập trang Quản Trị thành công!'
     });
   } catch (error) {

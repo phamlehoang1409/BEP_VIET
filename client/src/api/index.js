@@ -54,8 +54,10 @@ export function getSocket() {
 // Generic Fetch helper with intelligent cloud failover
 async function request(endpoint, options = {}) {
   let url = `${currentBackendUrl}/api${endpoint}`;
+  const adminToken = typeof window !== 'undefined' ? localStorage.getItem('bepviet_admin_token') : null;
   const headers = {
     'Content-Type': 'application/json',
+    ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}),
     ...options.headers
   };
 
@@ -63,7 +65,9 @@ async function request(endpoint, options = {}) {
   try {
     response = await fetch(url, {
       ...options,
-      headers: options.isFormData ? options.headers : headers
+      headers: options.isFormData
+        ? { ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {}), ...options.headers }
+        : headers
     });
   } catch (networkErr) {
     // If local server is offline, immediately failover to Cloud backend!
@@ -159,11 +163,15 @@ export const uploadImageFile = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
 
+  const adminToken = typeof window !== 'undefined' ? localStorage.getItem('bepviet_admin_token') : null;
+  const authHeaders = adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {};
+
   let url = `${currentBackendUrl}/api/upload`;
   let response;
   try {
     response = await fetch(url, {
       method: 'POST',
+      headers: authHeaders,
       body: formData
     });
   } catch (networkErr) {
@@ -173,6 +181,7 @@ export const uploadImageFile = async (file) => {
       try {
         response = await fetch(url, {
           method: 'POST',
+          headers: authHeaders,
           body: formData
         });
       } catch (retryErr) {
@@ -295,6 +304,8 @@ export const adminLogin = (passcode) =>
     method: 'POST',
     body: JSON.stringify({ passcode })
   });
+
+export const verifyAdminTokenApi = () => request('/auth/verify-admin');
 
 export const updateProfile = (profileData) =>
   request('/auth/profile', {

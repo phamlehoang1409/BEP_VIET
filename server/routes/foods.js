@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 function cleanImageUrl(url) {
   if (!url || typeof url !== 'string') return url;
@@ -125,8 +126,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST create new food
-router.post('/', async (req, res) => {
+// POST create new food (Admin only)
+router.post('/', requireAdmin, async (req, res) => {
   try {
     const {
       name,
@@ -184,8 +185,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT update food details
-router.put('/:id', async (req, res) => {
+// PUT update food details (Admin only)
+router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -234,8 +235,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// PATCH quick edit price
-router.patch('/:id/price', async (req, res) => {
+// PATCH quick edit price (Admin only)
+router.patch('/:id/price', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { price, original_price } = req.body;
@@ -268,8 +269,8 @@ router.patch('/:id/price', async (req, res) => {
   }
 });
 
-// PATCH toggle stock status
-router.patch('/:id/status', async (req, res) => {
+// PATCH toggle stock status (Admin only)
+router.patch('/:id/status', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { data: food, error: findErr } = await supabase
@@ -302,8 +303,8 @@ router.patch('/:id/status', async (req, res) => {
   }
 });
 
-// DELETE food
-router.delete('/:id', async (req, res) => {
+// DELETE food (Admin only)
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { data: existing, error: findErr } = await supabase

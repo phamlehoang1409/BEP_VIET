@@ -19,7 +19,6 @@ export default function LoginModal() {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
-  const [adminPasscode, setAdminPasscode] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -96,25 +95,6 @@ export default function LoginModal() {
       handleClose();
     } catch (err) {
       showToast(err.message || 'Xác thực OTP thất bại', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    if (!adminPasscode) {
-      showToast('Vui lòng nhập mật khẩu quản trị viên', 'error');
-      return;
-    }
-    setLoading(true);
-    try {
-      await loginAsAdmin(adminPasscode);
-      showToast('Đăng nhập Quản Trị Viên thành công!', 'success');
-      handleClose();
-      navigate('/admin');
-    } catch (err) {
-      showToast(err.message || 'Mật khẩu quản trị không chính xác!', 'error');
     } finally {
       setLoading(false);
     }
@@ -199,18 +179,6 @@ export default function LoginModal() {
                 <ArrowRight className="w-4 h-4 text-slate-950" />
               </button>
             </form>
-
-            {/* Admin Switch shortcut */}
-            <div className="mt-6 pt-5 border-t border-slate-800 text-center">
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="text-xs text-slate-400 hover:text-amber-400 font-semibold inline-flex items-center gap-1.5 transition"
-              >
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Chủ quán / Quản trị viên đăng nhập</span>
-              </button>
-            </div>
           </div>
         )}
 
@@ -309,57 +277,6 @@ export default function LoginModal() {
                 className="w-full text-center text-xs text-slate-400 hover:text-amber-300 font-semibold py-1 transition"
               >
                 ← Đổi số điện thoại khác
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* STEP 3: Admin Passcode Login */}
-        {step === 3 && (
-          <div>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Quản Trị Bếp Việt
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 mb-6">
-              Dành riêng cho chủ quán. Yêu cầu nhập mật khẩu quản trị để truy cập trang quản lý đơn và món ăn.
-            </p>
-
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-amber-300/80 mb-1.5 uppercase tracking-wider">
-                  Mật khẩu quản trị viên
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-amber-400/80 absolute left-4 top-3.5" />
-                  <input
-                    type="password"
-                    placeholder="Nhập mật khẩu (14092006)"
-                    value={adminPasscode}
-                    onChange={(e) => setAdminPasscode(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-900 border border-slate-700 text-sm font-semibold text-white placeholder-slate-500 outline-none focus:border-amber-400 transition"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm shadow-xl active:scale-95 transition"
-              >
-                {loading ? 'Đang kiểm tra...' : 'Vào Trang Quản Trị'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="w-full text-center text-xs text-slate-400 hover:text-amber-400 font-semibold py-1 transition"
-              >
-                ← Quay lại đăng nhập Khách hàng
               </button>
             </form>
           </div>

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
-// GET dashboard summary stats
-router.get('/summary', async (req, res) => {
+// GET dashboard summary stats (Admin only)
+router.get('/summary', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.json({

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { verifyOtp, adminLogin as apiAdminLogin, updateProfile } from '../api';
+import { verifyOtp, adminLogin as apiAdminLogin, updateProfile, verifyAdminTokenApi } from '../api';
 
 const AuthContext = createContext();
 
@@ -20,6 +20,23 @@ export function AuthProvider({ children }) {
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Validate admin token on startup to prevent forged credentials
+  useEffect(() => {
+    if (adminToken) {
+      verifyAdminTokenApi()
+        .then((res) => {
+          if (!res || !res.success) {
+            setAdminToken(null);
+            localStorage.removeItem('bepviet_admin_token');
+          }
+        })
+        .catch(() => {
+          setAdminToken(null);
+          localStorage.removeItem('bepviet_admin_token');
+        });
+    }
+  }, [adminToken]);
 
   useEffect(() => {
     if (user) {

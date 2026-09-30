@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
-// GET all active chat conversations for Admin
-router.get('/rooms', async (req, res) => {
+// GET all active chat conversations for Admin (Admin only)
+router.get('/rooms', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.json({ success: true, rooms: [] });
@@ -193,8 +194,8 @@ router.delete('/:roomId', async (req, res) => {
   }
 });
 
-// DELETE /api/chat - Xóa toàn bộ lịch sử tin nhắn của tất cả khách hàng trong Supabase
-router.delete('/', async (req, res) => {
+// DELETE /api/chat - Xóa toàn bộ lịch sử tin nhắn của tất cả khách hàng trong Supabase (Admin only)
+router.delete('/', requireAdmin, async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Database service unavailable' });

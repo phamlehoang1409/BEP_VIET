@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 const SETTINGS_ROW_PHONE = 'STORE_SETTINGS';
 
@@ -80,8 +81,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT update store settings (Admin)
-router.put('/', async (req, res) => {
+// PUT update store settings (Chỉ Quản Trị Viên mới có quyền thay đổi cài đặt)
+router.put('/', requireAdmin, async (req, res) => {
   try {
     const {
       store_name,

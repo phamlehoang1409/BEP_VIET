@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 const VN_PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 
@@ -346,8 +347,8 @@ router.get('/user/:phone', async (req, res) => {
   }
 });
 
-// GET all orders for Admin with filters
-router.get('/', async (req, res) => {
+// GET all orders for Admin with filters (Yêu cầu quyền Quản Trị Viên)
+router.get('/', requireAdmin, async (req, res) => {
   try {
     const { status, search } = req.query;
 
@@ -416,8 +417,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PATCH update order status
-router.patch('/:id/status', async (req, res) => {
+// PATCH update order status (Chỉ Admin mới có quyền cập nhật trạng thái đơn)
+router.patch('/:id/status', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -466,7 +467,7 @@ router.patch('/:id/status', async (req, res) => {
 });
 
 // PATCH /api/orders/:id/confirm - Admin explicitly confirms an order
-router.patch('/:id/confirm', async (req, res) => {
+router.patch('/:id/confirm', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     if (!supabase) {
@@ -510,7 +511,7 @@ router.patch('/:id/confirm', async (req, res) => {
 });
 
 // PATCH /api/orders/:id/delivery-fee - Admin adjusts delivery fee for an order
-router.patch('/:id/delivery-fee', async (req, res) => {
+router.patch('/:id/delivery-fee', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { delivery_fee } = req.body;
@@ -624,8 +625,8 @@ router.patch('/:id/cancel', async (req, res) => {
   }
 });
 
-// POST /api/orders/cleanup-old - Chủ động dọn dẹp các đơn hàng cũ đã hoàn thành/hủy từ ngày hôm trước
-router.post('/cleanup-old', async (req, res) => {
+// POST /api/orders/cleanup-old - Chủ động dọn dẹp các đơn hàng cũ đã hoàn thành/hủy từ ngày hôm trước (Admin only)
+router.post('/cleanup-old', requireAdmin, async (req, res) => {
   try {
     const result = await autoCleanupOldCompletedOrders();
     return res.json({

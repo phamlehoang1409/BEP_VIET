@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { requireAdmin } = require('../middleware/authMiddleware');
 
 const REVIEWS_ROW_PHONE = 'STORE_REVIEWS';
 
@@ -101,8 +102,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PATCH toggle review visibility
-router.patch('/:id/toggle', async (req, res) => {
+// PATCH toggle review visibility (Admin only)
+router.patch('/:id/toggle', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     let reviews = [];
