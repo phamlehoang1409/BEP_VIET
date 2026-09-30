@@ -275,22 +275,29 @@ function playChatNotificationSound() {
 
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-0.5 rounded-full border border-amber-400/20">
+              💬 Live Chat
+            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] text-emerald-400 font-bold">Online</span>
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Trung Tâm Hỗ Trợ & Chat Với Khách Hàng
+            Trung Tâm Hỗ Trợ Khách Hàng
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Trò chuyện trực tiếp với khách hàng, tư vấn món ăn và tiến trình đơn hàng (Real-time 100%)
+            Trò chuyện trực tiếp, tư vấn món ăn và theo dõi tiến trình đơn hàng
           </p>
         </div>
 
         <button
           onClick={() => fetchRooms(false)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition border border-slate-700"
+          className="self-start flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700 shadow-lg"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Làm mới danh sách</span>
+          <span>Làm Mới</span>
         </button>
       </div>
 
@@ -332,7 +339,7 @@ function playChatNotificationSound() {
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-slate-800 text-orange-400 flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0 border border-amber-500/20">
                         <User className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
@@ -372,9 +379,9 @@ function playChatNotificationSound() {
           {activeRoomId ? (
             <>
               {/* Header */}
-              <div className="p-4 bg-slate-900 border-b border-slate-700/60 flex items-center justify-between">
+              <div className="p-4 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 border-b border-amber-500/20 flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-black text-xs">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/25 to-orange-500/25 text-amber-400 flex items-center justify-center font-black text-xs border border-amber-500/30 shadow-md">
                     <Phone className="w-4 h-4" />
                   </div>
                   <div>
@@ -411,8 +418,8 @@ function playChatNotificationSound() {
                         <div
                           className={`max-w-[75%] p-3 rounded-2xl text-xs leading-relaxed ${
                             isFromAdmin
-                              ? 'bg-orange-500 text-white rounded-br-xs shadow-md'
-                              : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-xs'
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-br-xs shadow-lg shadow-amber-500/20'
+                              : 'bg-slate-800/90 text-slate-200 border border-slate-700/60 rounded-bl-xs shadow-sm'
                           }`}
                         >
                           <p className="font-black text-[10px] opacity-75 mb-0.5">
@@ -436,13 +443,13 @@ function playChatNotificationSound() {
               </div>
 
               {/* Quick Reply Templates */}
-              <div className="px-4 py-2 bg-slate-900 border-t border-slate-800 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+              <div className="px-4 py-2.5 bg-gradient-to-r from-slate-900 to-slate-900/95 border-t border-amber-500/10 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
                 {ADMIN_QUICK_TEMPLATES.map((tmpl, idx) => (
                   <button
                     key={idx}
                     disabled={sending}
                     onClick={() => handleTemplateSend(tmpl)}
-                    className="whitespace-nowrap text-[11px] font-semibold bg-slate-800 hover:bg-orange-500/20 hover:text-orange-400 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-700 transition shrink-0 disabled:opacity-50"
+                    className="whitespace-nowrap text-[11px] font-semibold bg-slate-800/80 hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-500/30 text-slate-300 px-3.5 py-2 rounded-xl border border-slate-700/60 transition shrink-0 disabled:opacity-50 shadow-sm"
                   >
                     {tmpl}
                   </button>
@@ -456,14 +463,14 @@ function playChatNotificationSound() {
                   placeholder="Nhập câu trả lời gửi trực tiếp cho khách hàng..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-orange-500 border border-slate-700"
+                  className="flex-1 px-4 py-3 rounded-2xl bg-slate-800/90 text-sm text-white placeholder-slate-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/10 border border-slate-700/60 transition"
                 />
                 <button
                   type="submit"
                   disabled={!replyText.trim() || sending}
                   className={`w-9 h-9 rounded-xl flex items-center justify-center text-white transition ${
                     replyText.trim() && !sending
-                      ? 'bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/30 active:scale-95'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/30 active:scale-95'
                       : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                   }`}
                 >
@@ -476,9 +483,12 @@ function playChatNotificationSound() {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs p-6 text-center">
-              <MessageSquare className="w-12 h-12 text-slate-700 mb-2" />
-              <span>Chưa có cuộc trò chuyện nào được chọn. Chọn khách hàng bên trái hoặc đợi tin nhắn mới để phản hồi.</span>
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+                <MessageSquare className="w-8 h-8 text-amber-400/60" />
+              </div>
+              <p className="text-sm font-bold text-slate-400 mb-1">Chưa Có Cuộc Trò Chuyện</p>
+              <p className="text-[11px] text-slate-500 max-w-xs">Chọn khách hàng ở bên trái để bắt đầu trò chuyện, hoặc đợi tin nhắn mới từ khách hàng.</p>
             </div>
           )}
         </div>

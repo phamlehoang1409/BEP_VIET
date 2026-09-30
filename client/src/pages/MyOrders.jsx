@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw } from 'lucide-react';
-import { getCustomerOrders, getSocket } from '../api';
+import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle } from 'lucide-react';
+import { getCustomerOrders, getSocket, cancelOrder } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { formatVND } from '../utils/vietnamData';
+import { useToast } from '../components/Toast';
 
 export default function MyOrders() {
   const { user, setIsAuthModalOpen } = useAuth();
@@ -12,6 +13,7 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchPhone, setSearchPhone] = useState(user?.phone || '');
+  const { showToast } = useToast();
 
   const fetchOrders = async (phone) => {
     if (!phone) return;
@@ -23,6 +25,21 @@ export default function MyOrders() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    try {
+      const res = await cancelOrder(orderId);
+      if (res.success) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o))
+        );
+        showToast('Đã hủy đơn hàng thành công!', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Không thể hủy đơn hàng', 'error');
     }
   };
 
@@ -208,6 +225,15 @@ export default function MyOrders() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {(order.status === 'pending' || order.status === 'confirmed') && (
+                    <button
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Hủy đơn</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setIsChatOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 text-xs font-bold transition"

@@ -318,45 +318,58 @@ export default function OrderManagement() {
                     </div>
                   </div>
 
-                  {/* Status selector */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 hidden sm:inline">Trạng thái:</span>
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className={`text-xs font-black rounded-xl px-3 py-2 outline-none border transition ${
-                        order.status === 'pending'
-                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                          : order.status === 'confirmed'
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                          : order.status === 'preparing'
-                          ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
-                          : order.status === 'delivering'
-                          ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
-                          : order.status === 'completed'
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                          : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
-                      }`}
-                    >
-                      <option value="pending" className="bg-slate-900 text-amber-400">
-                        Chờ xác nhận (Pending)
-                      </option>
-                      <option value="confirmed" className="bg-slate-900 text-emerald-400">
-                        Đã xác nhận (Confirmed)
-                      </option>
-                      <option value="preparing" className="bg-slate-900 text-orange-400">
-                        Bếp đang nấu (Preparing)
-                      </option>
-                      <option value="delivering" className="bg-slate-900 text-sky-400">
-                        Shipper đang giao (Delivering)
-                      </option>
-                      <option value="completed" className="bg-slate-900 text-emerald-400">
-                        Đã hoàn tất (Completed)
-                      </option>
-                      <option value="cancelled" className="bg-slate-900 text-rose-400">
-                        Đã hủy đơn (Cancelled)
-                      </option>
-                    </select>
+                  {/* Status Action Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => handleStatusChange(order.id, 'cancelled')}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 text-[11px] font-bold transition border border-rose-500/30"
+                      >
+                        ❌ Hủy Đơn
+                      </button>
+                    )}
+                    {order.status === 'confirmed' && (
+                      <>
+                        <button
+                          onClick={() => handleStatusChange(order.id, 'preparing')}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/30 text-orange-400 text-[11px] font-black transition border border-orange-500/30"
+                        >
+                          🍳 Bếp Đang Nấu
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(order.id, 'cancelled')}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 text-[11px] font-bold transition border border-rose-500/30"
+                        >
+                          ❌ Hủy Đơn
+                        </button>
+                      </>
+                    )}
+                    {order.status === 'preparing' && (
+                      <button
+                        onClick={() => handleStatusChange(order.id, 'delivering')}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/30 text-sky-400 text-[11px] font-black transition border border-sky-500/30"
+                      >
+                        🛵 Giao Cho Shipper
+                      </button>
+                    )}
+                    {order.status === 'delivering' && (
+                      <button
+                        onClick={() => handleStatusChange(order.id, 'completed')}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 text-[11px] font-black transition border border-emerald-500/30"
+                      >
+                        ✅ Hoàn Thành
+                      </button>
+                    )}
+                    {order.status === 'completed' && (
+                      <span className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 text-[11px] font-black border border-emerald-500/30">
+                        ✅ Đã Hoàn Thành
+                      </span>
+                    )}
+                    {order.status === 'cancelled' && (
+                      <span className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 text-[11px] font-black border border-rose-500/30">
+                        ❌ Đã Hủy
+                      </span>
+                    )}
                   </div>
                 </div>
 

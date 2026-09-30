@@ -232,6 +232,11 @@ export const confirmOrder = (id) =>
     method: 'PATCH'
   });
 
+export const cancelOrder = (id) =>
+  request(`/orders/${id}/cancel`, {
+    method: 'PATCH'
+  });
+
 export const updateOrderDeliveryFee = (id, delivery_fee) =>
   request(`/orders/${id}/delivery-fee`, {
     method: 'PATCH',

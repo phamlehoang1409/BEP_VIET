@@ -23,6 +23,7 @@ export default function LoginModal() {
   const [phoneError, setPhoneError] = useState('');
   const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isReturningUser, setIsReturningUser] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
@@ -34,6 +35,7 @@ export default function LoginModal() {
     setOtp('');
     setPhoneError('');
     setNameError('');
+    setIsReturningUser(false);
   };
 
   const handleSendOtp = async (e) => {
@@ -53,6 +55,14 @@ export default function LoginModal() {
         setPhone(validation.normalized);
         setStep(2);
         setOtp('123456'); // prefill demo OTP for convenient testing
+        // Check if returning customer
+        if (res.isExistingUser && res.existingName) {
+          setName(res.existingName);
+          setIsReturningUser(true);
+          showToast(`Chào mừng ${res.existingName} quay trở lại! 🎉`, 'success', 4000);
+        } else {
+          setIsReturningUser(false);
+        }
         showToast(`Mã xác thực đã gửi tới ${validation.normalized} (Mã thử nghiệm: 123456)`, 'info', 5000);
       }
     } catch (err) {
@@ -236,37 +246,52 @@ export default function LoginModal() {
                 />
               </div>
 
-              {/* MANDATORY FULL NAME INPUT */}
+              {/* NAME INPUT - Different UI for returning vs new customers */}
               <div>
                 <label className="block text-xs font-bold text-amber-300/80 mb-1.5 uppercase tracking-wider">
-                  Họ và Tên của Quý khách <span className="text-rose-400">* (Bắt buộc)</span>
+                  {isReturningUser ? 'Xin chào Quý khách!' : 'Họ và Tên của Quý khách'}{' '}
+                  {!isReturningUser && <span className="text-rose-400">* (Bắt buộc)</span>}
                 </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-amber-400/80 absolute left-4 top-3.5" />
-                  <input
-                    type="text"
-                    placeholder="Quý khách tự nhập họ tên (VD: Hoàng Anh)..."
-                    value={name}
-                    onChange={(e) => {
-                      setName(e.target.value);
-                      if (nameError) setNameError('');
-                    }}
-                    className={`w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-900 border text-sm font-semibold text-white placeholder-slate-500 outline-none transition ${
-                      nameError
-                        ? 'border-rose-400 bg-rose-950/20'
-                        : 'border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
-                    }`}
-                  />
-                </div>
-                {nameError ? (
-                  <p className="text-xs text-rose-400 font-medium mt-1.5 flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{nameError}</span>
-                  </p>
+                {isReturningUser ? (
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                      <User className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-emerald-300">{name}</p>
+                      <p className="text-[11px] text-emerald-200/70">Hệ thống đã nhận diện Quý khách. Bấm xác nhận để đăng nhập nhanh!</p>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Vui lòng tự nhập họ tên để chủ quán và shipper tiện phục vụ chu đáo nhất.
-                  </p>
+                  <>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-amber-400/80 absolute left-4 top-3.5" />
+                      <input
+                        type="text"
+                        placeholder="Quý khách tự nhập họ tên (VD: Hoàng Anh)..."
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          if (nameError) setNameError('');
+                        }}
+                        className={`w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-900 border text-sm font-semibold text-white placeholder-slate-500 outline-none transition ${
+                          nameError
+                            ? 'border-rose-400 bg-rose-950/20'
+                            : 'border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20'
+                        }`}
+                      />
+                    </div>
+                    {nameError ? (
+                      <p className="text-xs text-rose-400 font-medium mt-1.5 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{nameError}</span>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Vui lòng tự nhập họ tên để chủ quán và shipper tiện phục vụ chu đáo nhất.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 

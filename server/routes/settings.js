@@ -63,15 +63,10 @@ router.get('/', async (req, res) => {
     const openTotal = openH * 60 + (openM || 0);
     const closeTotal = closeH * 60 + (closeM || 0);
 
-    let isCurrentlyOpen = settings.is_open;
-    if (isCurrentlyOpen) {
-      if (closeTotal >= openTotal) {
-        isCurrentlyOpen = vnMinutes >= openTotal && vnMinutes < closeTotal;
-      } else {
-        // Overnight hours, e.g. 18:00 to 02:00
-        isCurrentlyOpen = vnMinutes >= openTotal || vnMinutes < closeTotal;
-      }
-    }
+    // is_open is the admin manual override switch
+    // When is_open = true, always open (admin controls)
+    // When is_open = false, always closed (admin shut down)
+    let isCurrentlyOpen = !!settings.is_open;
 
     return res.json({
       success: true,

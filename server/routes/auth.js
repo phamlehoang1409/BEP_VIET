@@ -16,7 +16,7 @@ function normalizePhone(phone) {
 }
 
 // Request OTP simulation
-router.post('/request-otp', (req, res) => {
+router.post('/request-otp', async (req, res) => {
   const { phone } = req.body;
   if (!phone) {
     return res.status(400).json({ error: 'Vui lòng nhập số điện thoại' });
@@ -29,6 +29,24 @@ router.post('/request-otp', (req, res) => {
     });
   }
 
+  // Check if this phone number already has an account
+  let isExistingUser = false;
+  let existingName = '';
+  if (supabase) {
+    try {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('name, role')
+        .eq('phone', normalized)
+        .neq('role', 'store_settings')
+        .maybeSingle();
+      if (existing && existing.name) {
+        isExistingUser = true;
+        existingName = existing.name;
+      }
+    } catch (e) {}
+  }
+
   // Pre-fixed demo OTP
   const demoOtp = '123456';
 
@@ -36,7 +54,11 @@ router.post('/request-otp', (req, res) => {
     success: true,
     phone: normalized,
     otp: demoOtp,
-    message: `Mã OTP xác thực đã được gửi tới số ${normalized} (Mã thử nghiệm: 123456)`
+    isExistingUser,
+    existingName,
+    message: isExistingUser
+      ? `Chào mừng ${existingName} quay trở lại! Mã OTP: 123456`
+      : `Mã OTP xác thực đã được gửi tới số ${normalized} (Mã thử nghiệm: 123456)`
   });
 });
 

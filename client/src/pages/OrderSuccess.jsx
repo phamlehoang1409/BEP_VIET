@@ -14,11 +14,13 @@ import {
   Sparkles,
   AlertCircle,
   ShieldCheck,
-  RotateCw
+  RotateCw,
+  XCircle
 } from 'lucide-react';
-import { getOrderById, getSocket } from '../api';
+import { getOrderById, getSocket, cancelOrder } from '../api';
 import { formatVND } from '../utils/vietnamData';
 import { useChat } from '../context/ChatContext';
+import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 
 export default function OrderSuccess() {
@@ -26,6 +28,9 @@ export default function OrderSuccess() {
   const location = useLocation();
   const { setIsChatOpen } = useChat();
   const { user, setIsAuthModalOpen } = useAuth();
+  
+  const { showToast } = useToast();
+  const [cancelling, setCancelling] = useState(false);
 
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
@@ -42,6 +47,23 @@ export default function OrderSuccess() {
         })
         .catch(console.error)
         .finally(() => setLoading(false));
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!order || cancelling) return;
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return;
+    setCancelling(true);
+    try {
+      const res = await cancelOrder(order.id);
+      if (res.success) {
+        setOrder((prev) => ({ ...prev, status: 'cancelled' }));
+        showToast('Đã hủy đơn hàng thành công!', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Không thể hủy đơn hàng', 'error');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -381,6 +403,16 @@ export default function OrderSuccess() {
 
       {/* ACTION BUTTONS & HOTLINE */}
       <div className="flex flex-col sm:flex-row gap-3">
+        {(order?.status === 'pending' || order?.status === 'confirmed') && (
+          <button
+            onClick={handleCancelOrder}
+            disabled={cancelling}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm border border-rose-200 transition"
+          >
+            <XCircle className="w-4 h-4" />
+            <span>{cancelling ? 'Đang hủy...' : 'Hủy Đơn Hàng'}</span>
+          </button>
+        )}
         <button
           onClick={() => {
             if (!user) {

@@ -490,4 +490,61 @@ router.patch('/:id/delivery-fee', async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/cancel - Customer cancels their order (only if pending or confirmed)
+router.patch('/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!supabase) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    // Get current order status
+    const { data: curOrder } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!curOrder) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    // Only allow cancellation when status is 'pending' or 'confirmed'
+    if (curOrder.status !== 'pending' && curOrder.status !== 'confirmed') {
+      return res.status(400).json({
+        error: 'Không thể hủy đơn hàng! Bếp đã bắt đầu nấu món hoặc đơn đã được giao. Vui lòng liên hệ hotline 0353859726 nếu cần hỗ trợ.'
+      });
+    }
+
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
+
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Lỗi khi hủy đơn hàng' });
+    }
+
+    const orderFormatted = { ...updated, items: updated.order_items || [] };
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', orderFormatted);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Đã hủy đơn hàng thành công!',
+      order: orderFormatted
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
