@@ -13,7 +13,6 @@ import BottomNav from './components/BottomNav';
 import CartDrawer from './components/CartDrawer';
 import LiveChatWidget from './components/LiveChatWidget';
 import LoginModal from './components/LoginModal';
-import PwaInstallBanner from './components/PwaInstallBanner';
 
 // Customer Pages
 import Home from './pages/Home';
@@ -91,7 +90,6 @@ function CustomerLayout() {
         <LiveChatWidget />
         <BottomNav />
         <LoginModal />
-        <PwaInstallBanner />
 
         {/* Customer Footer */}
         <footer className="hidden md:block bg-[#0D0F17] border-t border-amber-900/30 py-8 mt-12 text-slate-400 text-xs">
@@ -123,6 +121,16 @@ function CustomerLayout() {
               📍 Địa chỉ: {storeSettings.address}
             </div>
           )}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-600">
+            <span>© {new Date().getFullYear()} Bếp Việt Gourmet. Tinh hoa ẩm thực Mì Indomie Hà Nội.</span>
+            <span
+              onClick={() => { window.location.href = '/admin/login'; }}
+              className="cursor-default select-none text-slate-800 hover:text-slate-700"
+              title=""
+            >
+              .
+            </span>
+          </div>
         </footer>
       </div>
     </ChatProvider>

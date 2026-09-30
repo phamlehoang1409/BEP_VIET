@@ -652,6 +652,22 @@ export default function Checkout() {
                 </p>
               </div>
 
+              {/* ORDER INSURANCE - BẢO HIỂM ĐƠN HÀNG 100% */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-300 text-xs text-emerald-950 space-y-1.5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-black text-emerald-800">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Bảo Hiểm Món Ăn Bếp Việt (Miễn Phí 100%)</span>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">
+                    Đã Kích Hoạt
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-800/90 leading-relaxed">
+                  🛡️ <strong>Cam kết vàng:</strong> Mì Indomie giao tận tay nóng hổi giòn rụm trong 20-30 phút. Bồi thường đổi mới trong 15 phút hoặc hoàn lại 100% nếu món bị nguội hoặc đổ vỡ do vận chuyển!
+                </p>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"

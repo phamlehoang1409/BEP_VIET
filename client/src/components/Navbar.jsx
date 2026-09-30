@@ -14,6 +14,39 @@ export default function Navbar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdown, setUserDropdown] = useState(false);
 
+  // Secret admin entry: Click logo 5 times in 2.5s OR Ctrl+Shift+A
+  const logoClicksRef = React.useRef({ count: 0, lastTime: 0 });
+
+  const handleLogoClick = (e) => {
+    const now = Date.now();
+    if (now - logoClicksRef.current.lastTime > 2500) {
+      logoClicksRef.current.count = 1;
+    } else {
+      logoClicksRef.current.count += 1;
+    }
+    logoClicksRef.current.lastTime = now;
+
+    if (logoClicksRef.current.count >= 5) {
+      e.preventDefault();
+      logoClicksRef.current.count = 0;
+      navigate('/admin/login');
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) ||
+        (e.altKey && (e.key === 'a' || e.key === 'A'))
+      ) {
+        e.preventDefault();
+        navigate('/admin/login');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -68,8 +101,8 @@ export default function Navbar() {
       {/* Main Navbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-3">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+          {/* Logo with secret 5-click admin entry */}
+          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2.5 shrink-0 group select-none">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition duration-300">
               <span className="text-xl sm:text-2xl">🍜</span>
             </div>
@@ -127,18 +160,6 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Admin Switch Button (Chỉ hiển thị khi đã đăng nhập Admin) */}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 text-xs sm:text-sm font-bold shadow-md transition duration-200 border border-amber-500/40"
-                title="Trang Quản Trị Quán"
-              >
-                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
-                <span className="hidden sm:inline">Quản Trị Quán</span>
-                <span className="sm:hidden">Admin</span>
-              </Link>
-            )}
 
             {/* Cart Trigger */}
             <button

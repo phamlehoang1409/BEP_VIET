@@ -348,3 +348,4 @@ export const getReviews = () => request('/reviews');
 export const checkOrderReviewed = (orderId) => request(`/reviews/check/${orderId}`);
 export const submitReview = (data) => request('/reviews', { method: 'POST', body: JSON.stringify(data) });
 export const toggleReviewVisibility = (id) => request(`/reviews/${id}/toggle`, { method: 'PATCH' });
+export const deleteReview = (id) => request(`/reviews/${id}`, { method: 'DELETE' });

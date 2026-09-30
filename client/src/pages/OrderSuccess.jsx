@@ -207,118 +207,179 @@ export default function OrderSuccess() {
         </div>
       )}
 
-      {/* 5-STEP LIVE TRACKING STEPPER */}
-      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+      {/* 5-STEP LIVE TRACKING STEPPER WITH ANIMATED CONNECTING PROGRESS LINE */}
+      <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-extrabold text-base text-slate-900">Tiến Trình Đơn Hàng</h3>
-            <p className="text-xs text-slate-400">Trực tiếp theo dõi tiến độ từ bếp tới cửa nhà bạn</p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-base sm:text-lg text-slate-900">Tiến Trình Đơn Hàng</h3>
+              {!isCancelled && currentStep < 5 && (
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">Trực tiếp theo dõi tiến độ theo thời gian thực</p>
           </div>
           <span
-            className={`text-xs font-black px-3 py-1 rounded-full uppercase ${
+            className={`text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider ${
               isPending
-                ? 'bg-amber-100 text-amber-700 animate-pulse'
+                ? 'bg-amber-100 text-amber-700 animate-pulse border border-amber-300'
                 : isConfirmed
-                ? 'bg-emerald-100 text-emerald-700'
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                 : order?.status === 'preparing'
-                ? 'bg-orange-100 text-orange-700'
+                ? 'bg-orange-100 text-orange-700 border border-orange-300'
                 : order?.status === 'delivering'
-                ? 'bg-sky-100 text-sky-700'
+                ? 'bg-sky-100 text-sky-700 border border-sky-300'
                 : order?.status === 'completed'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-rose-100 text-rose-700'
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                : 'bg-rose-100 text-rose-700 border border-rose-300'
             }`}
           >
-            {isPending && 'Chờ Quán Duyệt'}
-            {isConfirmed && 'Đã Xác Nhận'}
-            {order?.status === 'preparing' && 'Bếp Đang Nấu'}
-            {order?.status === 'delivering' && 'Shipper Đang Giao'}
-            {order?.status === 'completed' && 'Giao Xong'}
-            {isCancelled && 'Đã Hủy'}
+            {isPending && '⏳ Chờ Duyệt'}
+            {isConfirmed && '✅ Đã Xác Nhận'}
+            {order?.status === 'preparing' && '🍳 Bếp Đang Nấu'}
+            {order?.status === 'delivering' && '🛵 Đang Giao'}
+            {order?.status === 'completed' && '🎉 Thành Công'}
+            {isCancelled && '❌ Đã Hủy'}
           </span>
         </div>
 
-        {/* Stepper bar (5 steps) */}
-        <div className="grid grid-cols-5 gap-1.5 text-center">
-          {/* Step 1: Chờ Duyệt */}
-          <div className="flex flex-col items-center space-y-1.5">
-            <div
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
-                currentStep >= 1
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
-              1. Chờ Duyệt
-            </span>
-          </div>
+        {/* Stepper track & circles */}
+        <div className="relative pt-2 pb-1">
+          {/* Background gray progress line */}
+          <div className="absolute top-6 left-6 right-6 sm:left-8 sm:right-8 h-1.5 bg-slate-100 rounded-full z-0" />
 
-          {/* Step 2: Quán Xác Nhận */}
-          <div className="flex flex-col items-center space-y-1.5">
+          {/* Animated active gradient progress fill */}
+          {!isCancelled && (
             <div
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
-                currentStep >= 2
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
-              2. Xác Nhận
-            </span>
-          </div>
+              className="absolute top-6 left-6 sm:left-8 h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-emerald-500 rounded-full z-0 transition-all duration-700 ease-out shadow-sm shadow-orange-500/30"
+              style={{
+                width:
+                  currentStep <= 1
+                    ? '0%'
+                    : currentStep === 2
+                    ? 'calc(25% - 12px)'
+                    : currentStep === 3
+                    ? 'calc(50% - 12px)'
+                    : currentStep === 4
+                    ? 'calc(75% - 12px)'
+                    : 'calc(100% - 24px)'
+              }}
+            />
+          )}
 
-          {/* Step 3: Đang Nấu */}
-          <div className="flex flex-col items-center space-y-1.5">
-            <div
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
-                currentStep >= 3
-                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              <ChefHat className="w-4 h-4 sm:w-5 sm:h-5" />
+          {/* 5 Step Icons */}
+          <div className="relative z-10 grid grid-cols-5 gap-1 text-center">
+            {/* Step 1: Chờ Duyệt */}
+            <div className="flex flex-col items-center space-y-1.5">
+              <div
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 ${
+                  currentStep > 1
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : currentStep === 1
+                    ? 'bg-gradient-to-tr from-amber-500 to-orange-500 text-slate-950 ring-4 ring-amber-400/30 scale-110 shadow-lg shadow-amber-500/30'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                {currentStep > 1 ? <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" /> : <Clock className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />}
+              </div>
+              <span className={`text-[10px] sm:text-xs font-bold leading-tight ${currentStep === 1 ? 'text-amber-600 font-black' : 'text-slate-700'}`}>
+                1. Chờ Duyệt
+              </span>
             </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
-              3. Đang Nấu
-            </span>
-          </div>
 
-          {/* Step 4: Đang Giao HN */}
-          <div className="flex flex-col items-center space-y-1.5">
-            <div
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
-                currentStep >= 4
-                  ? 'bg-sky-500 text-white shadow-md shadow-sky-500/20'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              <Bike className="w-4 h-4 sm:w-5 sm:h-5" />
+            {/* Step 2: Quán Xác Nhận */}
+            <div className="flex flex-col items-center space-y-1.5">
+              <div
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 ${
+                  currentStep > 2
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : currentStep === 2
+                    ? 'bg-emerald-500 text-white ring-4 ring-emerald-400/30 scale-110 shadow-lg shadow-emerald-500/30'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                <CheckCircle className={`w-4 h-4 sm:w-5 sm:h-5 ${currentStep === 2 ? 'animate-bounce' : ''}`} />
+              </div>
+              <span className={`text-[10px] sm:text-xs font-bold leading-tight ${currentStep === 2 ? 'text-emerald-600 font-black' : 'text-slate-700'}`}>
+                2. Xác Nhận
+              </span>
             </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
-              4. Đang Giao
-            </span>
-          </div>
 
-          {/* Step 5: Giao Xong */}
-          <div className="flex flex-col items-center space-y-1.5">
-            <div
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-xs font-black transition ${
-                currentStep >= 5
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              <PackageCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+            {/* Step 3: Đang Nấu */}
+            <div className="flex flex-col items-center space-y-1.5">
+              <div
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 ${
+                  currentStep > 3
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : currentStep === 3
+                    ? 'bg-gradient-to-tr from-amber-500 to-orange-500 text-white ring-4 ring-orange-400/30 scale-110 shadow-lg shadow-orange-500/30'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                <ChefHat className={`w-4 h-4 sm:w-5 sm:h-5 ${currentStep === 3 ? 'animate-pulse' : ''}`} />
+              </div>
+              <span className={`text-[10px] sm:text-xs font-bold leading-tight ${currentStep === 3 ? 'text-orange-600 font-black' : 'text-slate-700'}`}>
+                3. Đang Nấu
+              </span>
             </div>
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
-              5. Thành Công
-            </span>
+
+            {/* Step 4: Đang Giao HN */}
+            <div className="flex flex-col items-center space-y-1.5">
+              <div
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 ${
+                  currentStep > 4
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                    : currentStep === 4
+                    ? 'bg-sky-500 text-white ring-4 ring-sky-400/30 scale-110 shadow-lg shadow-sky-500/30'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                <Bike className={`w-4 h-4 sm:w-5 sm:h-5 ${currentStep === 4 ? 'animate-bounce' : ''}`} />
+              </div>
+              <span className={`text-[10px] sm:text-xs font-bold leading-tight ${currentStep === 4 ? 'text-sky-600 font-black' : 'text-slate-700'}`}>
+                4. Đang Giao
+              </span>
+            </div>
+
+            {/* Step 5: Giao Xong */}
+            <div className="flex flex-col items-center space-y-1.5">
+              <div
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-500 ${
+                  currentStep === 5
+                    ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/30 scale-110 shadow-lg shadow-emerald-600/30'
+                    : 'bg-slate-100 text-slate-400'
+                }`}
+              >
+                <PackageCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <span className={`text-[10px] sm:text-xs font-bold leading-tight ${currentStep === 5 ? 'text-emerald-600 font-black' : 'text-slate-700'}`}>
+                5. Thành Công
+              </span>
+            </div>
           </div>
+        </div>
+
+        {/* ORDER INSURANCE BADGE IN STEPPER */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/80 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-black text-emerald-900 leading-tight">
+                🛡️ Bảo Hiểm Món Ăn Bếp Việt 100% Đang Có Hiệu Lực
+              </p>
+              <p className="text-[11px] text-emerald-700">
+                Cam kết mì nóng hổi, giòn rụm • Đổi mới hoặc hoàn 100% tiền trong 15p nếu có sự cố
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase text-emerald-700 bg-white px-2.5 py-1 rounded-full border border-emerald-300 shrink-0 shadow-xs">
+            Đã Bảo Hiểm
+          </span>
         </div>
       </div>
 
@@ -402,17 +463,18 @@ export default function OrderSuccess() {
       </div>
 
       {/* ACTION BUTTONS & HOTLINE */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {(order?.status === 'pending' || order?.status === 'confirmed') && (
           <button
             onClick={handleCancelOrder}
             disabled={cancelling}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm border border-rose-200 transition"
+            className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm border border-rose-200 transition shadow-sm active:scale-95 disabled:opacity-50"
           >
-            <XCircle className="w-4 h-4" />
-            <span>{cancelling ? 'Đang hủy...' : 'Hủy Đơn Hàng'}</span>
+            <XCircle className="w-4 h-4 text-rose-500" />
+            <span>{cancelling ? 'Đang Hủy Đơn...' : 'Hủy Đơn Hàng'}</span>
           </button>
         )}
+
         <button
           onClick={() => {
             if (!user) {
@@ -421,26 +483,26 @@ export default function OrderSuccess() {
               setIsChatOpen(true);
             }
           }}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-sm border border-amber-200 transition"
+          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm shadow-md shadow-amber-500/20 active:scale-95 transition"
         >
-          <MessageCircle className="w-4 h-4" />
+          <MessageCircle className="w-4 h-4 text-slate-950" />
           <span>Chat Ngay Với Chủ Quán</span>
         </button>
 
         <a
           href="tel:0353859726"
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-[#0D0F17] hover:bg-[#161922] text-amber-300 font-bold text-sm border border-amber-500/30 transition"
+          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-slate-900 to-[#161922] hover:bg-slate-800 text-amber-300 font-bold text-sm border border-amber-500/30 transition shadow-sm active:scale-95"
         >
-          <Phone className="w-4 h-4" />
+          <Phone className="w-4 h-4 text-amber-400" />
           <span>Hotline: 0353859726</span>
         </a>
 
         <Link
           to="/orders"
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition"
+          className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-200 shadow-sm active:scale-95 transition"
         >
-          <span>Xem Lịch Sử Đơn</span>
-          <ArrowRight className="w-4 h-4" />
+          <span>Xem Lịch Sử Đơn Hàng</span>
+          <ArrowRight className="w-4 h-4 text-slate-600" />
         </Link>
       </div>
     </div>

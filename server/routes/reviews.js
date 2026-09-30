@@ -135,4 +135,40 @@ router.patch('/:id/toggle', requireAdmin, async (req, res) => {
   }
 });
 
+// DELETE review by id (Admin only)
+router.delete('/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let reviews = [];
+    if (supabase) {
+      const { data } = await supabase
+        .from('users')
+        .select('name')
+        .eq('phone', REVIEWS_ROW_PHONE)
+        .eq('role', 'store_reviews')
+        .maybeSingle();
+      if (data && data.name) reviews = JSON.parse(data.name);
+    }
+
+    const initialLength = reviews.length;
+    reviews = reviews.filter((r) => String(r.id) !== String(id));
+
+    if (reviews.length === initialLength) {
+      return res.status(404).json({ error: 'Không tìm thấy đánh giá cần xóa' });
+    }
+
+    if (supabase) {
+      await supabase.from('users').upsert({
+        phone: REVIEWS_ROW_PHONE,
+        role: 'store_reviews',
+        name: JSON.stringify(reviews)
+      }, { onConflict: 'phone' });
+    }
+
+    return res.json({ success: true, message: 'Đã xóa đánh giá thành công!', reviews });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
