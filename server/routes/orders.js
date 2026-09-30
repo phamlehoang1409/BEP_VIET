@@ -132,6 +132,33 @@ router.post('/', async (req, res) => {
       });
     }
 
+    const addrCleaned = delivery_address.trim().toLowerCase();
+    // Chống lặp ký tự vô nghĩa (aaaaa, 11111, xxxxx)
+    if (/(.)\1{3,}/.test(addrCleaned)) {
+      return res.status(400).json({
+        error: 'Địa chỉ chứa chuỗi ký tự lặp vô nghĩa! Vui lòng nhập địa chỉ có thật tại Hà Nội.'
+      });
+    }
+
+    // Chống từ khóa rác / linh tinh
+    const blacklisted = [
+      'linh tinh', 'lung tung', 'khong co', 'chua co', 'khong biet', 'chua biet',
+      'test', 'demo', 'asdf', 'qwerty', '12345', '11111', 'aaaaa', 'hahaha',
+      'dau cung duoc', 'tuy quan', 'ko co', 'fake', 'abcde'
+    ];
+    if (blacklisted.some((w) => addrCleaned.includes(w))) {
+      return res.status(400).json({
+        error: 'Địa chỉ giao hàng không hợp lệ! Vui lòng nhập số nhà, tên đường thật để shipper giao hàng.'
+      });
+    }
+
+    // Phải có nguyên âm
+    if (!/[aeiouyáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(addrCleaned)) {
+      return res.status(400).json({
+        error: 'Địa chỉ không hợp lệ! Vui lòng nhập tên đường, tòa nhà có nghĩa.'
+      });
+    }
+
     // Validate Items
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Giỏ hàng trống! Vui lòng chọn ít nhất một món ăn.' });

@@ -15,7 +15,8 @@ import {
   AlertCircle,
   ShieldCheck,
   RotateCw,
-  XCircle
+  XCircle,
+  ExternalLink
 } from 'lucide-react';
 import { getOrderById, getSocket, cancelOrder } from '../api';
 import { formatVND } from '../utils/vietnamData';
@@ -400,9 +401,20 @@ export default function OrderSuccess() {
           </div>
           <div className="sm:col-span-2">
             <span className="text-slate-400 block mb-0.5">Địa chỉ giao (Nội thành Hà Nội):</span>
-            <strong className="text-slate-800 text-sm leading-relaxed">
-              {order?.delivery_address}
-            </strong>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+              <strong className="text-slate-800 text-sm leading-relaxed">
+                {order?.delivery_address}
+              </strong>
+              <a
+                href={order?.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order?.delivery_address || '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 font-bold text-xs border border-amber-400/40 transition shrink-0 active:scale-95"
+              >
+                <span>🗺️ Xem Trên Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5 text-amber-600" />
+              </a>
+            </div>
           </div>
           {order?.note && (
             <div className="sm:col-span-2">

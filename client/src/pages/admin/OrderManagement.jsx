@@ -18,7 +18,8 @@ import {
   Settings,
   X,
   Save,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 import {
   getAllOrders,
@@ -403,15 +404,27 @@ export default function OrderManagement() {
                 </div>
 
                 {/* Delivery Address & Note */}
-                <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 text-xs space-y-1.5">
-                  <div className="flex items-start gap-2 text-slate-300">
-                    <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <span>
-                      Địa chỉ giao: <strong className="text-white">{order.delivery_address}</strong>{' '}
-                      {order.district && (
-                        <span className="text-amber-300 font-bold">({order.district}, Hà Nội)</span>
-                      )}
-                    </span>
+                <div className="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 text-xs space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-start gap-2 text-slate-300">
+                      <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <span>
+                        Địa chỉ giao: <strong className="text-white">{order.delivery_address}</strong>{' '}
+                        {order.district && (
+                          <span className="text-amber-300 font-bold">({order.district}, Hà Nội)</span>
+                        )}
+                      </span>
+                    </div>
+
+                    <a
+                      href={order.google_maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address + (order.district && !order.delivery_address.includes(order.district) ? `, ${order.district}, Hà Nội` : ''))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-bold text-[11px] border border-amber-500/30 transition shrink-0 self-start sm:self-auto active:scale-95"
+                    >
+                      <span>🗺️ Mở Google Maps</span>
+                      <ExternalLink className="w-3 h-3 text-amber-400" />
+                    </a>
                   </div>
                   {order.note && (
                     <p className="text-amber-300/90 pl-6 italic">
