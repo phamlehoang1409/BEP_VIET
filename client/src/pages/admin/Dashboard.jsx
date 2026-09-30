@@ -241,17 +241,50 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <select
-                    value={ord.status}
-                    onChange={(e) => handleQuickStatus(ord.id, e.target.value)}
-                    className="text-xs font-bold bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white outline-none focus:border-orange-500"
-                  >
-                    <option value="pending">Chờ xác nhận</option>
-                    <option value="preparing">Đang nấu</option>
-                    <option value="delivering">Đang giao</option>
-                    <option value="completed">Đã hoàn thành</option>
-                    <option value="cancelled">Đã hủy</option>
-                  </select>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {ord.status === 'pending' && (
+                      <button
+                        onClick={() => handleQuickStatus(ord.id, 'confirmed')}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 text-[11px] font-bold transition border border-emerald-500/30"
+                      >
+                        ✅ Duyệt
+                      </button>
+                    )}
+                    {ord.status === 'confirmed' && (
+                      <button
+                        onClick={() => handleQuickStatus(ord.id, 'preparing')}
+                        className="px-2.5 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/30 text-orange-400 text-[11px] font-black transition border border-orange-500/30"
+                      >
+                        🍳 Nấu
+                      </button>
+                    )}
+                    {ord.status === 'preparing' && (
+                      <button
+                        onClick={() => handleQuickStatus(ord.id, 'delivering')}
+                        className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/30 text-sky-400 text-[11px] font-black transition border border-sky-500/30"
+                      >
+                        🛵 Giao
+                      </button>
+                    )}
+                    {ord.status === 'delivering' && (
+                      <button
+                        onClick={() => handleQuickStatus(ord.id, 'completed')}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 text-[11px] font-black transition border border-emerald-500/30"
+                      >
+                        ✅ Xong
+                      </button>
+                    )}
+                    {ord.status === 'completed' && (
+                      <span className="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 text-[11px] font-black border border-emerald-500/30">
+                        ✅ Hoàn Thành
+                      </span>
+                    )}
+                    {ord.status === 'cancelled' && (
+                      <span className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 text-[11px] font-black border border-rose-500/30">
+                        ❌ Đã Hủy
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

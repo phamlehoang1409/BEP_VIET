@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle } from 'lucide-react';
-import { getCustomerOrders, getSocket, cancelOrder } from '../api';
+import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star } from 'lucide-react';
+import { getCustomerOrders, getSocket, cancelOrder, submitReview } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { formatVND } from '../utils/vietnamData';
@@ -13,6 +13,9 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchPhone, setSearchPhone] = useState(user?.phone || '');
+  const [reviewingOrder, setReviewingOrder] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
   const { showToast } = useToast();
 
   const fetchOrders = async (phone) => {
@@ -242,6 +245,16 @@ export default function MyOrders() {
                     <span>Hỏi quán</span>
                   </button>
 
+                  {order.status === 'completed' && (
+                    <button
+                      onClick={() => { setReviewingOrder(order); setRating(5); setComment(''); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold transition"
+                    >
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span>Đánh giá</span>
+                    </button>
+                  )}
+
                   <Link
                     to={`/order-success/${order.id}`}
                     state={{ order }}
@@ -254,6 +267,44 @@ export default function MyOrders() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <h3 className="font-bold text-lg text-center text-slate-800">Đánh giá đơn hàng</h3>
+            <div className="flex justify-center gap-2">
+              {[1,2,3,4,5].map(star => (
+                <button key={star} onClick={() => setRating(star)}>
+                  <Star className={`w-8 h-8 ${rating >= star ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'}`} />
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Chia sẻ cảm nhận của bạn về món ăn..."
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              className="w-full p-3 rounded-xl border border-slate-200 text-sm h-24 outline-none focus:border-amber-400"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setReviewingOrder(null)} className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">Hủy</button>
+              <button onClick={async () => {
+                try {
+                  await submitReview({
+                    order_id: reviewingOrder.order_code,
+                    customer_name: reviewingOrder.customer_name,
+                    customer_phone: reviewingOrder.customer_phone,
+                    rating,
+                    comment
+                  });
+                  showToast('Cảm ơn bạn đã đánh giá!', 'success');
+                  setReviewingOrder(null);
+                } catch(e) { showToast('Lỗi', 'error'); }
+              }} className="flex-1 py-2.5 rounded-xl bg-orange-500 text-white font-bold text-sm">Gửi</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

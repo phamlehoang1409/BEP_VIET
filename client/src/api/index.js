@@ -316,3 +316,8 @@ export const markChatRead = (roomId, reader_role) =>
 
 // --- Dashboard Stats API ---
 export const getDashboardStats = () => request('/stats/summary');
+
+// --- Reviews API ---
+export const getReviews = () => request('/reviews');
+export const submitReview = (data) => request('/reviews', { method: 'POST', body: JSON.stringify(data) });
+export const toggleReviewVisibility = (id) => request(`/reviews/${id}/toggle`, { method: 'PATCH' });

@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   Phone,
   MapPin,
-  ExternalLink
+  ExternalLink,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket, getChatRooms, getAllOrders, confirmOrder } from '../../api';
@@ -151,6 +152,7 @@ export default function AdminLayout() {
     { to: '/admin/foods', label: 'Quản Lý Món Ăn', icon: UtensilsCrossed },
     { to: '/admin/orders', label: 'Quản Lý Đơn Hàng', icon: Package, badge: pendingOrdersCount, badgeColor: 'bg-amber-500' },
     { to: '/admin/coupons', label: 'Mã Khuyến Mãi', icon: Tag },
+    { to: '/admin/reviews', label: 'Đánh Giá', icon: Star },
     { to: '/admin/chat', label: 'Hỗ Trợ Khách Hàng', icon: MessageSquare, badge: adminUnreadTotal, badgeColor: 'bg-red-500' }
   ];
 
