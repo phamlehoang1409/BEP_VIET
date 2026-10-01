@@ -24,6 +24,7 @@ import { useChat } from '../context/ChatContext';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
+import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
 
 export default function OrderSuccess() {
   const { id } = useParams();
@@ -209,6 +210,37 @@ export default function OrderSuccess() {
           </div>
         </div>
       )}
+
+      {/* SHOPEE-STYLE VIETQR PAYMENT GATEWAY (For Banking / MoMo Orders) */}
+      {(order?.payment_method === 'BANKING' ||
+        order?.payment_method === 'MOMO' ||
+        order?.payment_method === 'vietqr' ||
+        order?.payment_method === 'banking') && (
+        <VietQRPaymentGateway
+          order={order}
+          onPaymentCompleted={syncOrder}
+        />
+      )}
+
+      {/* LUCKY SPIN REWARD BANNER (Each order earns +1 spin) */}
+      <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-rose-500/15 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3 text-center sm:text-left">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg shadow-orange-500/25 shrink-0">
+            🎁
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1 text-[11px] font-black uppercase text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full mb-0.5">
+              <span>Đặc Quyền Khách Hàng</span>
+            </div>
+            <h4 className="font-black text-slate-900 text-sm sm:text-base">
+              Bạn Vừa Được Tặng +1 Lượt Quay May Mắn!
+            </h4>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Áp dụng cho đơn hàng <strong>#{order?.order_code}</strong>. Hãy bấm nút <strong>"Vòng Quay May Mắn"</strong> ở góc dưới màn hình để quay voucher giảm giá cho lần đặt món tiếp theo nhé!
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* 5-STEP LIVE TRACKING STEPPER WITH ANIMATED CONNECTING PROGRESS LINE */}
       <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">

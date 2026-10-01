@@ -189,7 +189,13 @@ export default function Checkout() {
       const res = await placeOrder(orderPayload);
       if (res.success && res.order) {
         clearCart();
-        showToast('Đã gửi đơn hàng tới Bếp Việt! Vui lòng chờ quán xác nhận.', 'success', 5000);
+        // Award +1 spin turn for future purchase!
+        try {
+          const currentSpins = parseInt(localStorage.getItem('bepviet_user_spins') || '0', 10);
+          localStorage.setItem('bepviet_user_spins', (currentSpins + 1).toString());
+        } catch (e) {}
+
+        showToast('Đã gửi đơn hàng tới Bếp Việt! Bạn nhận được +1 lượt quay may mắn 🎁', 'success', 6000);
         navigate(`/order-success/${res.order.id}`, { state: { order: res.order } });
       }
     } catch (err) {

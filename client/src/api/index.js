@@ -349,3 +349,7 @@ export const checkOrderReviewed = (orderId) => request(`/reviews/check/${orderId
 export const submitReview = (data) => request('/reviews', { method: 'POST', body: JSON.stringify(data) });
 export const toggleReviewVisibility = (id) => request(`/reviews/${id}/toggle`, { method: 'PATCH' });
 export const deleteReview = (id) => request(`/reviews/${id}`, { method: 'DELETE' });
+
+// --- Lucky Wheel API ---
+export const getLuckyWheelStatus = () => request('/lucky-wheel/status');
+export const spinLuckyWheel = () => request('/lucky-wheel/spin', { method: 'POST' });
