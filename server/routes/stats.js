@@ -63,17 +63,69 @@ router.get('/summary', requireAdmin, async (req, res) => {
 
     const totalCustomers = (customersData || []).length;
 
-    // 4. Recent 5 orders
-    const recentOrders = allOrders.slice(0, 5).map(o => ({
+    // 4. Recent 5 orders (with items for instant printing)
+    const { data: recentOrdersWithItems } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('id', { ascending: false })
+      .limit(6);
+
+    const recentOrders = (recentOrdersWithItems || allOrders.slice(0, 6)).map(o => ({
       id: o.id,
       order_code: o.order_code,
       customer_name: o.customer_name,
       customer_phone: o.customer_phone,
+      delivery_address: o.delivery_address,
+      notes: o.notes,
       total_amount: o.total_amount,
+      subtotal: o.subtotal,
+      delivery_fee: o.delivery_fee,
+      discount_amount: o.discount_amount || o.discount,
+      insurance_fee: o.insurance_fee,
       payment_method: o.payment_method,
       status: o.status,
-      created_at: o.created_at
+      created_at: o.created_at,
+      items: o.order_items || []
     }));
+
+    // 5. Compute daily revenue for the last 7 days
+    const last7Days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toISOString().split('T')[0];
+      const dayName = d.toLocaleDateString('vi-VN', { weekday: 'short' });
+      const displayDate = `${d.getDate()}/${d.getMonth() + 1}`;
+
+      const dayOrders = allOrders.filter(o => {
+        if (!o.created_at) return false;
+        const oDate = o.created_at.split('T')[0];
+        return oDate === dayStr && o.status !== 'cancelled';
+      });
+
+      const dayRevenue = dayOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+      last7Days.push({
+        dateKey: dayStr,
+        dayName,
+        displayDate,
+        revenue: dayRevenue,
+        orderCount: dayOrders.length
+      });
+    }
+
+    // 6. Detailed status breakdown
+    const statusBreakdown = {
+      pending: pendingOrders,
+      preparing: allOrders.filter(o => o.status === 'preparing').length,
+      delivering: deliveringOrders,
+      completed: completedOrders,
+      cancelled: allOrders.filter(o => o.status === 'cancelled').length
+    };
+
+    const avgOrderValue = completedOrders > 0
+      ? Math.round(totalRevenue / (completedOrders || 1))
+      : 0;
 
     return res.json({
       success: true,
@@ -85,8 +137,11 @@ router.get('/summary', requireAdmin, async (req, res) => {
         completedOrders,
         totalFoods,
         totalCustomers,
+        avgOrderValue,
         topFoods,
-        recentOrders
+        recentOrders,
+        last7Days,
+        statusBreakdown
       }
     });
   } catch (error) {

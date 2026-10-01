@@ -89,6 +89,14 @@ export default function Checkout() {
           { code: 'BEPVIETVIP', discount_type: 'percent', discount_value: 25, min_order: 120000, description: 'VIP giảm 25% tối đa 100k' }
         ]);
       }
+
+      // Check if user won a voucher from Lucky Wheel
+      try {
+        const luckyCode = localStorage.getItem('bepviet_lucky_voucher');
+        if (luckyCode && !appliedPromo) {
+          setInputCoupon(luckyCode);
+        }
+      } catch (e) {}
     }
     loadCoupons();
   }, []);

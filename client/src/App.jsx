@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { Gift } from 'lucide-react';
 
 // Providers
 import { AuthProvider } from './context/AuthContext';
@@ -13,6 +14,7 @@ import BottomNav from './components/BottomNav';
 import CartDrawer from './components/CartDrawer';
 import LiveChatWidget from './components/LiveChatWidget';
 import LoginModal from './components/LoginModal';
+import LuckyWheelModal from './components/LuckyWheelModal';
 
 // Customer Pages
 import Home from './pages/Home';
@@ -78,6 +80,7 @@ class ErrorBoundary extends React.Component {
 // Customer Layout Shell
 function CustomerLayout() {
   const { storeSettings } = useCart();
+  const [isWheelOpen, setIsWheelOpen] = useState(false);
 
   return (
     <ChatProvider>
@@ -90,6 +93,22 @@ function CustomerLayout() {
         <LiveChatWidget />
         <BottomNav />
         <LoginModal />
+
+        {/* Floating Lucky Wheel Button (Bottom Left) */}
+        <button
+          onClick={() => setIsWheelOpen(true)}
+          className="fixed left-4 bottom-20 md:bottom-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-black text-xs shadow-xl shadow-orange-500/35 hover:scale-105 active:scale-95 transition border-2 border-amber-300"
+          title="Vòng quay may mắn nhận mã giảm giá"
+        >
+          <Gift className="w-4 h-4 text-amber-200 animate-bounce" />
+          <span className="hidden sm:inline">Vòng Quay May Mắn</span>
+          <span className="sm:hidden">Quay Thưởng</span>
+        </button>
+
+        <LuckyWheelModal
+          isOpen={isWheelOpen}
+          onClose={() => setIsWheelOpen(false)}
+        />
 
         {/* Customer Footer */}
         <footer className="hidden md:block bg-[#0D0F17] border-t border-amber-900/30 py-8 mt-12 text-slate-400 text-xs">

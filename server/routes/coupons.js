@@ -34,6 +34,26 @@ const DEFAULT_COUPONS = [
     expiry_date: '2027-12-31',
     description: 'Ưu đãi VIP Bếp Việt: Giảm 25% cho đơn tiệc gia đình từ 200.000₫',
     is_active: true
+  },
+  {
+    code: 'MAYMAN10K',
+    discount_type: 'fixed',
+    discount_value: 10000,
+    min_order: 50000,
+    max_discount: 10000,
+    expiry_date: '2027-12-31',
+    description: 'Voucher May Mắn: Giảm 10.000₫ cho đơn từ 50.000₫',
+    is_active: true
+  },
+  {
+    code: 'FREESHIP15K',
+    discount_type: 'fixed',
+    discount_value: 15000,
+    min_order: 60000,
+    max_discount: 15000,
+    expiry_date: '2027-12-31',
+    description: 'Voucher May Mắn: Miễn phí vận chuyển 15.000₫ cho đơn từ 60.000₫',
+    is_active: true
   }
 ];
 

@@ -20,13 +20,15 @@ import {
   Phone,
   MapPin,
   ExternalLink,
-  Star
+  Star,
+  Printer
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket, getChatRooms, getAllOrders, confirmOrder } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
 import StoreSettingsModal from '../../components/StoreSettingsModal';
+import PrintBillModal from '../../components/PrintBillModal';
 import { startOrderAlarm, stopOrderAlarm, playNewOrderChime } from '../../utils/orderAlertSound';
 
 export default function AdminLayout() {
@@ -41,9 +43,10 @@ export default function AdminLayout() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // New Order Modal Alert
+  // New Order Modal Alert & Print
   const [alertOrder, setAlertOrder] = useState(null);
   const [confirmingOrder, setConfirmingOrder] = useState(false);
+  const [printingOrder, setPrintingOrder] = useState(null);
 
   // STRICT ACCESS CONTROL: Must be logged in as Admin with password 14092006
   // Anyone typing /admin or any /admin/* without admin session is INSTANTLY kicked out to homepage
@@ -82,7 +85,7 @@ export default function AdminLayout() {
             if (diffMinutes < 60) {
               setAlertOrder(newest);
               if (soundEnabled) {
-                startOrderAlarm();
+                startOrderAlarm(newest.order_code);
               }
             }
           }
@@ -101,7 +104,7 @@ export default function AdminLayout() {
       setPendingOrdersCount((c) => c + 1);
       setAlertOrder(newOrder);
       if (soundEnabled) {
-        startOrderAlarm();
+        startOrderAlarm(newOrder.order_code);
       }
     };
 
@@ -371,7 +374,19 @@ export default function AdminLayout() {
                 <span>{confirmingOrder ? 'Đang xác nhận...' : 'XÁC NHẬN ĐƠN HÀNG NGAY (CHẤP THUẬN)'}</span>
               </button>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => {
+                    handleDismissAlert();
+                    setPrintingOrder(alertOrder);
+                  }}
+                  className="py-2.5 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs font-bold transition flex items-center justify-center gap-1.5 border border-orange-500/30"
+                  title="In phiếu bếp & shipper 80mm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>In Phiếu</span>
+                </button>
+
                 <button
                   onClick={() => {
                     handleDismissAlert();
@@ -380,20 +395,26 @@ export default function AdminLayout() {
                   className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition flex items-center justify-center gap-1.5"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Xem Danh Sách Đơn</span>
+                  <span>Xem Tất Cả</span>
                 </button>
 
                 <button
                   onClick={handleDismissAlert}
                   className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-bold transition"
                 >
-                  Tắt Chuông & Để Sau
+                  Tắt Chuông
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* PRINT BILL MODAL */}
+      <PrintBillModal
+        order={printingOrder}
+        onClose={() => setPrintingOrder(null)}
+      />
     </div>
   );
 }

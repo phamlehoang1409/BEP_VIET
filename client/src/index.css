@@ -123,3 +123,37 @@
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 20px);
 }
+
+/* 80mm & 58mm Thermal Bill Print Engine */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-thermal-bill,
+  #printable-thermal-bill * {
+    visibility: visible;
+  }
+  #printable-thermal-bill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}

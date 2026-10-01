@@ -19,7 +19,9 @@ import {
   X,
   Save,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Printer,
+  Volume2
 } from 'lucide-react';
 import {
   getAllOrders,
@@ -32,6 +34,8 @@ import {
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
 import StoreSettingsModal from '../../components/StoreSettingsModal';
+import PrintBillModal from '../../components/PrintBillModal';
+import { playNewOrderChime, speakNewOrder } from '../../utils/orderAlertSound';
 
 export default function OrderManagement() {
   const navigate = useNavigate();
@@ -41,6 +45,7 @@ export default function OrderManagement() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [printingOrder, setPrintingOrder] = useState(null);
 
   // Store Settings Modal trigger
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -77,7 +82,9 @@ export default function OrderManagement() {
     const socket = getSocket();
 
     const handleNewOrder = (newOrder) => {
-      showToast(`🔔 CÓ ĐƠN HÀNG MỚI: #${newOrder.order_code}! Vui lòng bấm Xác Nhận Đơn.`, 'info', 7000);
+      showToast(`🔔 CÓ ĐƠN HÀNG MỚI: #${newOrder.order_code}! Vui lòng bấm Xác Nhận Đơn.`, 'info', 8000);
+      playNewOrderChime();
+      speakNewOrder(newOrder.order_code);
       setOrders((prev) => [newOrder, ...prev]);
     };
 
@@ -207,6 +214,21 @@ export default function OrderManagement() {
             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
             <span className="hidden sm:inline">Dọn Đơn Cũ (Tự động)</span>
             <span className="sm:hidden">Dọn Cũ</span>
+          </button>
+
+          {/* Sound Test / Audio Unlock Button */}
+          <button
+            onClick={() => {
+              playNewOrderChime();
+              speakNewOrder('ORD-1409');
+              showToast('🔊 Đang thử chuông và phát giọng nói báo đơn mới!', 'info');
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition border border-amber-500/30"
+            title="Bấm để kiểm tra chuông báo và kích hoạt âm thanh cho trình duyệt"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Thử Chuông</span>
+            <span className="sm:hidden">Chuông</span>
           </button>
 
           <button
@@ -513,10 +535,19 @@ export default function OrderManagement() {
                       onClick={() =>
                         navigate('/admin/chat', { state: { customerPhone: order.customer_phone } })
                       }
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-bold transition"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-200 font-bold transition text-xs"
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Nhắn Tin Khách</span>
+                      <span>Nhắn Tin</span>
+                    </button>
+
+                    <button
+                      onClick={() => setPrintingOrder(order)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/30 text-orange-400 font-bold transition border border-orange-500/30 text-xs"
+                      title="In hóa đơn & phiếu bếp khổ 80mm/58mm"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>In Bill</span>
                     </button>
                   </div>
                 </div>
@@ -605,6 +636,12 @@ export default function OrderManagement() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onSettingsUpdated={() => fetchOrders()}
+      />
+
+      {/* PRINT BILL MODAL */}
+      <PrintBillModal
+        order={printingOrder}
+        onClose={() => setPrintingOrder(null)}
       />
     </div>
   );
