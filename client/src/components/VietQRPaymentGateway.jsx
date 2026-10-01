@@ -22,15 +22,20 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
   const [copiedField, setCopiedField] = useState(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes countdown (Shopee standard)
   const [isPaidConfirmed, setIsPaidConfirmed] = useState(
-    order?.payment_status === 'paid' ||
-    order?.status === 'confirmed' ||
-    order?.status === 'preparing' ||
-    order?.status === 'delivering' ||
-    order?.status === 'completed'
+    order?.status !== 'cancelled' &&
+      (order?.payment_status === 'paid' ||
+        order?.status === 'confirmed' ||
+        order?.status === 'preparing' ||
+        order?.status === 'delivering' ||
+        order?.status === 'completed')
   );
 
   // Sync paid state if order updates
   useEffect(() => {
+    if (order?.status === 'cancelled') {
+      setIsPaidConfirmed(false);
+      return;
+    }
     if (
       order?.payment_status === 'paid' ||
       order?.status === 'confirmed' ||
@@ -51,7 +56,7 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
     return () => clearInterval(timer);
   }, [timeLeft, isPaidConfirmed]);
 
-  if (!order) return null;
+  if (!order || order.status === 'cancelled') return null;
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
