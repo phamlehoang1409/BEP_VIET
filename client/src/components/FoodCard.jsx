@@ -5,11 +5,19 @@ import { useCart } from '../context/CartContext';
 import { useToast } from './Toast';
 
 export default function FoodCard({ food, onOpenDetail }) {
-  const { addToCart } = useCart();
+  const { addToCart, storeSettings } = useCart();
   const { showToast } = useToast();
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
+    if (storeSettings && storeSettings.is_currently_open === false) {
+      showToast(
+        `Quán hiện đang TẠM NGHỈ (${storeSettings.open_time || '08:00'} - ${storeSettings.close_time || '23:00'}), tạm thời chưa nhận đơn mới!`,
+        'error',
+        5000
+      );
+      return;
+    }
     if (!food.is_available) {
       showToast('Món ăn này hiện đang tạm hết, bạn thông cảm nhé!', 'error');
       return;

@@ -18,7 +18,8 @@ export default function CartDrawer() {
     promoCode,
     promoMessage,
     applyPromo,
-    total
+    total,
+    storeSettings
   } = useCart();
 
   const [inputCode, setInputCode] = useState('');
@@ -220,13 +221,32 @@ export default function CartDrawer() {
               </div>
 
               {/* Checkout Button */}
-              <button
-                onClick={handleCheckout}
-                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-orange-500/25 active:scale-95 transition"
-              >
-                <span>Tiến hành Đặt món</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              {storeSettings && storeSettings.is_currently_open === false ? (
+                <div className="space-y-2">
+                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center">
+                    <p className="text-xs font-bold text-rose-600">
+                      🔴 Quán hiện đang tạm nghỉ, chưa nhận đơn!
+                    </p>
+                    <p className="text-[11px] text-rose-500 mt-0.5">
+                      Giờ mở cửa: {storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'}
+                    </p>
+                  </div>
+                  <button
+                    disabled
+                    className="w-full py-3.5 px-4 rounded-2xl bg-slate-200 text-slate-500 font-extrabold text-sm border border-slate-300 cursor-not-allowed"
+                  >
+                    Tạm Ngưng Nhận Đơn
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleCheckout}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-xl shadow-orange-500/25 active:scale-95 transition"
+                >
+                  <span>Tiến hành Đặt món</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
         </div>

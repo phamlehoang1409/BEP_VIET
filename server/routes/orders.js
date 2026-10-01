@@ -112,6 +112,29 @@ router.post('/', async (req, res) => {
       coupon_code
     } = req.body;
 
+    // 0. Validate Store Status (Block order if store is closed/tam nghi)
+    if (supabase) {
+      try {
+        const { data: settingsData } = await supabase
+          .from('users')
+          .select('name')
+          .eq('phone', 'STORE_SETTINGS')
+          .eq('role', 'store_settings')
+          .maybeSingle();
+
+        if (settingsData && settingsData.name) {
+          const parsedSettings = JSON.parse(settingsData.name);
+          if (parsedSettings.is_open === false) {
+            return res.status(400).json({
+              error: `Quán hiện đang TẠM NGHỈ, không nhận đơn hàng mới! Giờ phục vụ: ${parsedSettings.open_time || '08:00'} - ${parsedSettings.close_time || '23:00'}. Quý khách vui lòng quay lại sau hoặc liên hệ Hotline ${parsedSettings.hotline || '0353859726'}.`
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi kiểm tra trạng thái mở cửa quán:', err.message);
+      }
+    }
+
     // Validate Customer Name
     if (!customer_name || customer_name.trim().length < 2) {
       return res.status(400).json({ error: 'Vui lòng nhập họ tên người nhận (tối thiểu 2 ký tự).' });

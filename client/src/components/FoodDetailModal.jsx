@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from './Toast';
 
 export default function FoodDetailModal({ food, onClose }) {
-  const { addToCart } = useCart();
+  const { addToCart, storeSettings } = useCart();
   const { showToast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
@@ -13,6 +13,14 @@ export default function FoodDetailModal({ food, onClose }) {
   if (!food) return null;
 
   const handleAddToCart = () => {
+    if (storeSettings && storeSettings.is_currently_open === false) {
+      showToast(
+        `Quán hiện đang TẠM NGHỈ (${storeSettings.open_time || '08:00'} - ${storeSettings.close_time || '23:00'}), tạm thời chưa nhận đơn mới!`,
+        'error',
+        5000
+      );
+      return;
+    }
     if (!food.is_available) {
       showToast('Món ăn hiện tạm hết!', 'error');
       return;
@@ -155,15 +163,23 @@ export default function FoodDetailModal({ food, onClose }) {
 
           <button
             onClick={handleAddToCart}
-            disabled={!food.is_available}
+            disabled={!food.is_available || (storeSettings && storeSettings.is_currently_open === false)}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm shadow-lg transition duration-200 ${
-              food.is_available
+              storeSettings && storeSettings.is_currently_open === false
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : food.is_available
                 ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25 active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>{food.is_available ? 'Thêm vào giỏ hàng' : 'Món tạm hết'}</span>
+            <span>
+              {storeSettings && storeSettings.is_currently_open === false
+                ? '🔴 Quán Đang Tạm Nghỉ'
+                : food.is_available
+                ? 'Thêm vào giỏ hàng'
+                : 'Món tạm hết'}
+            </span>
           </button>
         </div>
       </div>

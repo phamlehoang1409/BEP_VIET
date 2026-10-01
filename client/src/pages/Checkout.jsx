@@ -135,6 +135,17 @@ export default function Checkout() {
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
+
+    // Check if store is currently closed
+    if (storeSettings && storeSettings.is_currently_open === false) {
+      showToast(
+        `Quán hiện đang TẠM NGHỈ, không nhận đơn! Giờ phục vụ: ${storeSettings.open_time || '08:00'} - ${storeSettings.close_time || '23:00'}. Quý khách vui lòng quay lại sau!`,
+        'error',
+        6000
+      );
+      return;
+    }
+
     const newErrors = {};
 
     // Validate Name
@@ -241,6 +252,32 @@ export default function Checkout() {
           Khu vực giao: <strong>{storeSettings?.delivery_area || 'Nội thành Hà Nội'}</strong>. Giờ nhận đơn: <strong>{storeSettings?.open_time || '08:00'} - {storeSettings?.close_time || '23:00'}</strong>. Bảo hiểm nóng sốt 100%.
         </p>
       </div>
+
+      {/* CLOSED / TAM NGHI ALERT BANNER */}
+      {storeSettings && storeSettings.is_currently_open === false && (
+        <div className="mb-6 p-5 sm:p-6 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md animate-pulse">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-md shadow-rose-500/25">
+              🔴
+            </div>
+            <div>
+              <h3 className="font-black text-base sm:text-lg text-rose-700">
+                Bếp Việt Gourmet Hiện Đang Tạm Nghỉ - Không Nhận Đơn Mới!
+              </h3>
+              <p className="text-xs sm:text-sm text-rose-800/90 mt-0.5 leading-relaxed">
+                Quán đang tạm ngưng nhận đơn đặt món để chuẩn bị nguyên liệu và bảo dưỡng bếp. Giờ phục vụ: <strong>{storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'}</strong>. Quý khách vui lòng quay lại sau hoặc liên hệ Hotline <strong>{storeSettings.hotline || '0353859726'}</strong>.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/menu')}
+            className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition shrink-0"
+          >
+            Xem Thực Đơn
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmitOrder}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -699,11 +736,23 @@ export default function Checkout() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/25 active:scale-95 transition"
+                disabled={submitting || (storeSettings && storeSettings.is_currently_open === false)}
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition ${
+                  storeSettings && storeSettings.is_currently_open === false
+                    ? 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 shadow-xl shadow-amber-500/25 active:scale-95'
+                }`}
               >
-                <span>{submitting ? 'Đang gửi đơn hàng tới Bếp Việt...' : 'Gửi Đơn Món Chờ Quán Duyệt'}</span>
-                <ArrowRight className="w-4 h-4 text-slate-950" />
+                {storeSettings && storeSettings.is_currently_open === false ? (
+                  <span>🔴 Quán Đang Tạm Nghỉ - Tạm Ngưng Nhận Đơn</span>
+                ) : submitting ? (
+                  <span>Đang gửi đơn hàng tới Bếp Việt...</span>
+                ) : (
+                  <>
+                    <span>Gửi Đơn Món Chờ Quán Duyệt</span>
+                    <ArrowRight className="w-4 h-4 text-slate-950" />
+                  </>
+                )}
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">

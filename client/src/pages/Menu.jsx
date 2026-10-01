@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, SlidersHorizontal, UtensilsCrossed } from 'lucide-react';
+import { Search, Filter, SlidersHorizontal, UtensilsCrossed, AlertCircle, Clock } from 'lucide-react';
 import { getFoods, getCategories } from '../api';
+import { useCart } from '../context/CartContext';
 import FoodCard from '../components/FoodCard';
 import FoodDetailModal from '../components/FoodDetailModal';
 
@@ -17,6 +18,7 @@ export default function Menu() {
   const [sortBy, setSortBy] = useState('default');
   const [selectedFood, setSelectedFood] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { storeSettings } = useCart();
 
   // Sync state if query params change
   useEffect(() => {
@@ -102,6 +104,25 @@ export default function Menu() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
         </div>
       </div>
+
+      {/* CLOSED / TAM NGHI ALERT BANNER */}
+      {storeSettings && storeSettings.is_currently_open === false && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex items-center justify-between gap-4 shadow-sm animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-lg shrink-0">
+              🔴
+            </div>
+            <div>
+              <h4 className="font-black text-sm sm:text-base text-rose-700">
+                Bếp Việt Hiện Đang Tạm Nghỉ (Giờ mở cửa: {storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'})
+              </h4>
+              <p className="text-xs text-rose-800/80 mt-0.5">
+                Quý khách có thể xem trước thực đơn. Hệ thống sẽ mở nhận đơn ngay khi bắt đầu giờ phục vụ!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter and Sorting Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
