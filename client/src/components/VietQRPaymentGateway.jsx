@@ -68,10 +68,8 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
   const transferContent = `BV ${order.order_code}`;
   const amount = Number(order.total_amount) || 0;
 
-  // VietQR Napas247 Standard API with Techcombank BIN 970407
-  const qrUrl = `https://api.vietqr.io/image/970407-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(
-    transferContent
-  )}&accountName=${encodeURIComponent('PHAM LE HOANG')}`;
+  // Use the exact official Techcombank QR image uploaded by the shop owner
+  const qrImageSrc = '/owner_qr.png';
 
   const handleCopy = (text, fieldName) => {
     if (navigator.clipboard) {
@@ -82,22 +80,17 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
     }
   };
 
-  const handleDownloadQR = async () => {
+  const handleDownloadQR = () => {
     try {
-      showToast('Đang tải ảnh mã QR xuống điện thoại...', 'info');
-      const response = await fetch(qrUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `VietQR-BepViet-${order.order_code}.png`;
+      a.href = qrImageSrc;
+      a.download = `Techcombank-QR-${accountNumber}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      showToast('Đã lưu ảnh mã QR! Mở App Ngân hàng và chọn Quét từ ảnh nhé.', 'success');
+      showToast('Đã lưu ảnh mã QR Techcombank về điện thoại! Mở App Ngân hàng và quét nhé.', 'success');
     } catch (e) {
-      window.open(qrUrl, '_blank');
+      window.open(qrImageSrc, '_blank');
     }
   };
 
@@ -176,15 +169,11 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
                 <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-orange-500 rounded-bl-xl pointer-events-none" />
                 <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-orange-500 rounded-br-xl pointer-events-none" />
 
-                {/* QR Image */}
+                {/* QR Image - Official Techcombank QR provided by shop owner */}
                 <img
-                  src={qrUrl}
-                  alt={`VietQR ${order.order_code}`}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/owner_qr.png';
-                  }}
-                  className="w-56 h-56 sm:w-64 sm:h-64 object-contain rounded-2xl"
+                  src={qrImageSrc}
+                  alt="Mã QR Techcombank Bếp Việt"
+                  className="w-56 sm:w-64 object-contain rounded-2xl"
                 />
 
                 {/* Animated Scanning Radar Line */}
@@ -228,7 +217,7 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
                 {/* Bank Name */}
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Ngân hàng:</span>
-                  <strong className="text-slate-800 text-right">{bankName}</strong>
+                  <strong className="text-slate-800 text-right">Techcombank (TCB)</strong>
                 </div>
 
                 {/* Account Number */}
@@ -255,7 +244,20 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
                 {/* Account Holder */}
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Chủ tài khoản:</span>
-                  <strong className="text-slate-800 uppercase">{accountHolder}</strong>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-slate-800 uppercase font-black">PHẠM LÊ HOÀNG</strong>
+                    <button
+                      onClick={() => handleCopy('PHAM LE HOANG', 'Chủ tài khoản')}
+                      className="p-1.5 rounded-lg bg-white border border-amber-300 text-slate-600 hover:text-orange-600 transition"
+                      title="Sao chép tên chủ tài khoản"
+                    >
+                      {copiedField === 'Chủ tài khoản' ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Transfer Content Note */}
