@@ -20,6 +20,16 @@
   </head>
   <body class="bg-[#FAF8F5] text-slate-800 antialiased selection:bg-orange-500 selection:text-white">
     <div id="root"></div>
+    <script>
+      // Khóa phím F11 trên toàn bộ trang web
+      window.addEventListener('keydown', function(e) {
+        if (e.key === 'F11' || e.code === 'F11' || e.keyCode === 122) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }, true);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Automatic Service Worker cleanup and registration with cache busting
