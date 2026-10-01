@@ -57,16 +57,16 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
   const seconds = timeLeft % 60;
   const formattedCountdown = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-  const bankName = 'MB Bank (Ngân hàng Quân Đội)';
-  const accountNumber = '0353859726';
-  const accountHolder = 'BẾP VIỆT GOURMET';
+  const bankName = 'Techcombank (Ngân hàng Kỹ Thương)';
+  const accountNumber = '19073268561011';
+  const accountHolder = 'PHẠM LÊ HOÀNG (BẾP VIỆT)';
   const transferContent = `BV ${order.order_code}`;
   const amount = Number(order.total_amount) || 0;
 
-  // VietQR Napas247 Standard API
-  const qrUrl = `https://api.vietqr.io/image/970422-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(
+  // VietQR Napas247 Standard API with Techcombank BIN 970407
+  const qrUrl = `https://api.vietqr.io/image/970407-${accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(
     transferContent
-  )}&accountName=${encodeURIComponent(accountHolder)}`;
+  )}&accountName=${encodeURIComponent('PHAM LE HOANG')}`;
 
   const handleCopy = (text, fieldName) => {
     if (navigator.clipboard) {
@@ -175,6 +175,10 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
                 <img
                   src={qrUrl}
                   alt={`VietQR ${order.order_code}`}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/owner_qr.png';
+                  }}
                   className="w-56 h-56 sm:w-64 sm:h-64 object-contain rounded-2xl"
                 />
 
