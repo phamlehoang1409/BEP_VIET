@@ -46,8 +46,9 @@ export default function AdminLayout() {
   const [confirmingOrder, setConfirmingOrder] = useState(false);
 
   // STRICT ACCESS CONTROL: Must be logged in as Admin with password 14092006
+  // Anyone typing /admin or any /admin/* without admin session is INSTANTLY kicked out to homepage
   if (!isAdmin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Periodic polling & Socket for pending orders & chat unread

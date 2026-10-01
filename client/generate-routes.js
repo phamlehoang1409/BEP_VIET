@@ -30,6 +30,8 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
     'admin/coupons',
     'admin/chat',
     'admin/reviews',
+    'chu-quan-1409',
+    'bepviet-secret-1409',
     'menu',
     'checkout',
     'orders',

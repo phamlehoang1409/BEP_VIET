@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 
 // Providers
 import { AuthProvider } from './context/AuthContext';
@@ -124,7 +124,7 @@ function CustomerLayout() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-600">
             <span>© {new Date().getFullYear()} Bếp Việt Gourmet. Tinh hoa ẩm thực Mì Indomie Hà Nội.</span>
             <span
-              onClick={() => { window.location.href = '/admin/login'; }}
+              onClick={() => { window.location.href = '/chu-quan-1409'; }}
               className="cursor-default select-none text-slate-800 hover:text-slate-700"
               title=""
             >
@@ -154,8 +154,12 @@ export default function App() {
                   <Route path="/orders" element={<MyOrders />} />
                 </Route>
 
-                {/* Admin Login Route */}
-                <Route path="/admin/login" element={<AdminLogin />} />
+                {/* Block /admin/login - kicks unauthorized visitors out to homepage */}
+                <Route path="/admin/login" element={<Navigate to="/" replace />} />
+
+                {/* Secret Merchant Admin Portals (Only known to the shop owner) */}
+                <Route path="/chu-quan-1409" element={<AdminLogin />} />
+                <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
 
                 {/* Separated Merchant Admin Routes (Protected by AdminLayout) */}
                 <Route path="/admin" element={<AdminLayout />}>
