@@ -166,18 +166,6 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quick Admin Portal Button (Only visible when shop owner is logged in) */}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-black border border-amber-500/40 transition active:scale-95 shadow-sm"
-                title="Bảng Quản Trị Chủ Quán"
-              >
-                <Shield className="w-4 h-4 text-amber-400" />
-                <span className="hidden sm:inline">Quản Trị</span>
-              </Link>
-            )}
-
             {/* Cart Trigger */}
             <button
               onClick={() => setIsCartOpen(true)}
@@ -221,16 +209,6 @@ export default function Navbar() {
                       <p className="text-sm font-bold text-amber-300">{user.name}</p>
                       <p className="text-xs text-slate-400 font-mono">{user.phone}</p>
                     </div>
-                    {isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setUserDropdown(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-amber-300 font-bold hover:bg-amber-500/10 transition border-b border-slate-800"
-                      >
-                        <Shield className="w-4 h-4 text-amber-400" />
-                        Trang Quản Trị
-                      </Link>
-                    )}
                     <Link
                       to="/orders"
                       onClick={() => setUserDropdown(false)}

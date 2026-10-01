@@ -183,7 +183,7 @@ export default function OrderSuccess() {
             Đang Chờ Quán Xác Nhận Đơn Hàng...
           </h1>
           <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-            Đơn của Quý khách đã được gửi tới Quản trị viên Bếp Việt. Đơn chỉ được tính là{' '}
+            Đơn của Quý khách đã được gửi tới Bếp Việt. Đơn chỉ được tính là{' '}
             <strong className="text-amber-300">"Đặt Đơn Thành Công"</strong> ngay khi chủ quán bấm{' '}
             <strong className="text-emerald-400">Xác Nhận</strong>.
           </p>
