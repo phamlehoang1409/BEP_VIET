@@ -21,9 +21,35 @@
   <body class="bg-[#FAF8F5] text-slate-800 antialiased selection:bg-orange-500 selection:text-white">
     <div id="root"></div>
     <script>
-      // Khóa phím F11 trên toàn bộ trang web
+      // Khóa click chuột phải trên toàn bộ trang web
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }, true);
+
+      // Khóa phím F11, F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
       window.addEventListener('keydown', function(e) {
+        // F11 (Fullscreen)
         if (e.key === 'F11' || e.code === 'F11' || e.keyCode === 122) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // F12 (Inspect DevTools)
+        if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (Inspect Elements/Console)
+        if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+        // Ctrl+U (View Source)
+        if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
           e.preventDefault();
           e.stopPropagation();
           return false;
