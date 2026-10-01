@@ -93,6 +93,35 @@ export function CartProvider({ children }) {
     setPromoMessage('');
   };
 
+  const reorderItems = (orderItems) => {
+    if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) return 0;
+    setCartItems((prevItems) => {
+      const next = [...prevItems];
+      for (const item of orderItems) {
+        const foodId = item.food_id || item.id || item.food?.id;
+        const foodObj = {
+          id: foodId,
+          name: item.food_name || item.name,
+          price: Number(item.price) || 0,
+          image: item.food_image || item.image || item.food?.image,
+          is_available: true
+        };
+        const qty = Number(item.quantity) || 1;
+        const existingIdx = next.findIndex((ci) => ci.food.id === foodId);
+        if (existingIdx > -1) {
+          next[existingIdx] = {
+            ...next[existingIdx],
+            quantity: next[existingIdx].quantity + qty
+          };
+        } else {
+          next.push({ food: foodObj, quantity: qty, note: item.note || '' });
+        }
+      }
+      return next;
+    });
+    return orderItems.length;
+  };
+
   // Subtotal calculation
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.food.price * item.quantity,
@@ -180,6 +209,7 @@ export function CartProvider({ children }) {
       value={{
         cartItems,
         addToCart,
+        reorderItems,
         removeFromCart,
         updateQuantity,
         clearCart,

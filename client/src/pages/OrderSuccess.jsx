@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams, Link } from 'react-router-dom';
+import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import {
   CheckCircle,
@@ -23,14 +23,17 @@ import { formatVND } from '../utils/vietnamData';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import ConfirmModal from '../components/ConfirmModal';
 import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
 
 export default function OrderSuccess() {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { setIsChatOpen } = useChat();
   const { user, setIsAuthModalOpen } = useAuth();
+  const { reorderItems } = useCart();
   
   const { showToast } = useToast();
   const [cancelling, setCancelling] = useState(false);
@@ -82,6 +85,16 @@ export default function OrderSuccess() {
     } catch (err) {
       showToast(err.message || 'Không thể đổi phương thức thanh toán', 'error');
     }
+  };
+
+  const handleReorder = () => {
+    if (!order?.items || order.items.length === 0) {
+      showToast('Không có thông tin món ăn trong đơn hàng này để đặt lại', 'error');
+      return;
+    }
+    reorderItems(order.items);
+    showToast(`Đã thêm ${order.items.length} món từ đơn #${order.order_code} vào giỏ hàng!`, 'success', 3500);
+    navigate('/checkout');
   };
 
   useEffect(() => {
@@ -528,6 +541,17 @@ export default function OrderSuccess() {
 
       {/* ACTION BUTTONS & HOTLINE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* Reorder Button */}
+        {order?.items && order.items.length > 0 && (
+          <button
+            onClick={handleReorder}
+            className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-sm shadow-md shadow-amber-500/20 active:scale-95 transition"
+          >
+            <RotateCw className="w-4 h-4 text-slate-950" />
+            <span>🔄 Đặt Lại Đơn Này</span>
+          </button>
+        )}
+
         {(order?.status === 'pending' || order?.status === 'confirmed') && (
           <button
             onClick={() => setShowCancelModal(true)}

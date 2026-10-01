@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star, CheckCircle2 } from 'lucide-react';
+import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star, CheckCircle2, RotateCw } from 'lucide-react';
 import { getCustomerOrders, getSocket, cancelOrder, submitReview, getReviews } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { useCart } from '../context/CartContext';
 import { formatVND } from '../utils/vietnamData';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
@@ -11,6 +12,7 @@ import ConfirmModal from '../components/ConfirmModal';
 export default function MyOrders() {
   const { user, setIsAuthModalOpen } = useAuth();
   const { setIsChatOpen } = useChat();
+  const { reorderItems, setIsCartOpen } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchPhone, setSearchPhone] = useState(user?.phone || '');
@@ -22,6 +24,16 @@ export default function MyOrders() {
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const { showToast } = useToast();
+
+  const handleReorderOrder = (ord) => {
+    if (!ord?.items || ord.items.length === 0) {
+      showToast('Đơn hàng này không có thông tin món để đặt lại', 'error');
+      return;
+    }
+    reorderItems(ord.items);
+    showToast(`Đã thêm ${ord.items.length} món từ đơn #${ord.order_code || ord.id} vào giỏ hàng!`, 'success', 3500);
+    setIsCartOpen(true);
+  };
 
   const fetchOrders = async (phone) => {
     if (!phone) return;
@@ -251,7 +263,19 @@ export default function MyOrders() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Re-order button */}
+                  {order.items && order.items.length > 0 && (
+                    <button
+                      onClick={() => handleReorderOrder(order)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-xs active:scale-95 transition"
+                      title="Đặt lại các món trong đơn này"
+                    >
+                      <RotateCw className="w-3.5 h-3.5 text-slate-950" />
+                      <span>Đặt lại</span>
+                    </button>
+                  )}
+
                   {(order.status === 'pending' || order.status === 'confirmed') && (
                     <button
                       onClick={() => setCancellingOrderId(order.id)}
