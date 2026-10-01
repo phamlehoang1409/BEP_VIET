@@ -42,7 +42,8 @@ export default function Checkout() {
     promoMessage,
     applyPromo,
     total,
-    clearCart
+    clearCart,
+    showStoreClosedModal
   } = useCart();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -138,11 +139,7 @@ export default function Checkout() {
 
     // Check if store is currently closed
     if (storeSettings && storeSettings.is_currently_open === false) {
-      showToast(
-        `Quán hiện đang TẠM NGHỈ, không nhận đơn! Giờ phục vụ: ${storeSettings.open_time || '08:00'} - ${storeSettings.close_time || '23:00'}. Quý khách vui lòng quay lại sau!`,
-        'error',
-        6000
-      );
+      showStoreClosedModal();
       return;
     }
 
@@ -255,7 +252,10 @@ export default function Checkout() {
 
       {/* CLOSED / TAM NGHI ALERT BANNER */}
       {storeSettings && storeSettings.is_currently_open === false && (
-        <div className="mb-6 p-5 sm:p-6 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md animate-pulse">
+        <div 
+          onClick={() => showStoreClosedModal()}
+          className="mb-6 p-5 sm:p-6 rounded-3xl bg-rose-50 hover:bg-rose-100/70 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md transition cursor-pointer"
+        >
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-md shadow-rose-500/25">
               🔴
@@ -269,13 +269,28 @@ export default function Checkout() {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/menu')}
-            className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition shrink-0"
-          >
-            Xem Thực Đơn
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                showStoreClosedModal();
+              }}
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition active:scale-95"
+            >
+              Xem Chi Tiết
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/menu');
+              }}
+              className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition"
+            >
+              Thực Đơn
+            </button>
+          </div>
         </div>
       )}
 
@@ -734,26 +749,30 @@ export default function Checkout() {
               </div>
 
               {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={submitting || (storeSettings && storeSettings.is_currently_open === false)}
-                className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition ${
-                  storeSettings && storeSettings.is_currently_open === false
-                    ? 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 shadow-xl shadow-amber-500/25 active:scale-95'
-                }`}
-              >
-                {storeSettings && storeSettings.is_currently_open === false ? (
-                  <span>🔴 Quán Đang Tạm Nghỉ - Tạm Ngưng Nhận Đơn</span>
-                ) : submitting ? (
-                  <span>Đang gửi đơn hàng tới Bếp Việt...</span>
-                ) : (
-                  <>
-                    <span>Gửi Đơn Món Chờ Quán Duyệt</span>
-                    <ArrowRight className="w-4 h-4 text-slate-950" />
-                  </>
-                )}
-              </button>
+              {storeSettings && storeSettings.is_currently_open === false ? (
+                <button
+                  type="button"
+                  onClick={() => showStoreClosedModal()}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition bg-rose-50 hover:bg-rose-100 text-rose-600 border-2 border-rose-300 shadow-md active:scale-95"
+                >
+                  <span>🔴 Quán Đang Tạm Nghỉ (Bấm để xem thông báo)</span>
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm transition bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 shadow-xl shadow-amber-500/25 active:scale-95"
+                >
+                  {submitting ? (
+                    <span>Đang gửi đơn hàng tới Bếp Việt...</span>
+                  ) : (
+                    <>
+                      <span>Gửi Đơn Món Chờ Quán Duyệt</span>
+                      <ArrowRight className="w-4 h-4 text-slate-950" />
+                    </>
+                  )}
+                </button>
+              )}
 
               <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />

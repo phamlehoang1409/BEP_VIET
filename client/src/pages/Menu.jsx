@@ -18,7 +18,7 @@ export default function Menu() {
   const [sortBy, setSortBy] = useState('default');
   const [selectedFood, setSelectedFood] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { storeSettings } = useCart();
+  const { storeSettings, showStoreClosedModal } = useCart();
 
   // Sync state if query params change
   useEffect(() => {
@@ -107,7 +107,10 @@ export default function Menu() {
 
       {/* CLOSED / TAM NGHI ALERT BANNER */}
       {storeSettings && storeSettings.is_currently_open === false && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-rose-50 border-2 border-rose-300 text-rose-950 flex items-center justify-between gap-4 shadow-sm animate-pulse">
+        <div 
+          onClick={() => showStoreClosedModal()}
+          className="p-4 sm:p-5 rounded-3xl bg-rose-50 hover:bg-rose-100/70 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm transition cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-lg shrink-0">
               🔴
@@ -121,6 +124,16 @@ export default function Menu() {
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              showStoreClosedModal();
+            }}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition active:scale-95 shrink-0"
+          >
+            Xem Chi Tiết
+          </button>
         </div>
       )}
 

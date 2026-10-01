@@ -19,7 +19,8 @@ export default function CartDrawer() {
     promoMessage,
     applyPromo,
     total,
-    storeSettings
+    storeSettings,
+    showStoreClosedModal
   } = useCart();
 
   const [inputCode, setInputCode] = useState('');
@@ -223,19 +224,22 @@ export default function CartDrawer() {
               {/* Checkout Button */}
               {storeSettings && storeSettings.is_currently_open === false ? (
                 <div className="space-y-2">
-                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-center">
+                  <div 
+                    onClick={() => showStoreClosedModal()}
+                    className="p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-center cursor-pointer transition active:scale-98"
+                  >
                     <p className="text-xs font-bold text-rose-600">
                       🔴 Quán hiện đang tạm nghỉ, chưa nhận đơn!
                     </p>
                     <p className="text-[11px] text-rose-500 mt-0.5">
-                      Giờ mở cửa: {storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'}
+                      Giờ mở cửa: {storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'} (Bấm để xem)
                     </p>
                   </div>
                   <button
-                    disabled
-                    className="w-full py-3.5 px-4 rounded-2xl bg-slate-200 text-slate-500 font-extrabold text-sm border border-slate-300 cursor-not-allowed"
+                    onClick={() => showStoreClosedModal()}
+                    className="w-full py-3.5 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 font-extrabold text-sm border border-rose-300 transition active:scale-95 flex items-center justify-center gap-2"
                   >
-                    Tạm Ngưng Nhận Đơn
+                    <span>🔴 Tạm Ngưng Nhận Đơn (Xem Thông Báo)</span>
                   </button>
                 </div>
               ) : (

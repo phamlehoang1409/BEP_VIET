@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { validateCoupon, getStoreSettings, getSocket } from '../api';
+import StoreClosedModal from '../components/StoreClosedModal';
 
 const CartContext = createContext();
 
@@ -17,6 +18,19 @@ export function CartProvider({ children }) {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
+
+  // Store Closed Modal state (Center modal for both Mobile & Desktop)
+  const [isStoreClosedModalOpen, setIsStoreClosedModalOpen] = useState(false);
+  const [storeClosedCustomMsg, setStoreClosedCustomMsg] = useState('');
+
+  const showStoreClosedModal = (msg = '') => {
+    setStoreClosedCustomMsg(msg);
+    setIsStoreClosedModalOpen(true);
+  };
+
+  const closeStoreClosedModal = () => {
+    setIsStoreClosedModalOpen(false);
+  };
 
   // Store Settings (Dynamic shipping fee & free ship threshold configured by Admin)
   const [storeSettings, setStoreSettings] = useState({
@@ -226,10 +240,20 @@ export function CartProvider({ children }) {
         promoMessage,
         applyPromo,
         total,
-        itemCount
+        itemCount,
+        isStoreClosedModalOpen,
+        setIsStoreClosedModalOpen,
+        showStoreClosedModal,
+        closeStoreClosedModal
       }}
     >
       {children}
+      <StoreClosedModal
+        isOpen={isStoreClosedModalOpen}
+        onClose={closeStoreClosedModal}
+        storeSettings={storeSettings}
+        customMessage={storeClosedCustomMsg}
+      />
     </CartContext.Provider>
   );
 }

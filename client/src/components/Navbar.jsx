@@ -9,7 +9,7 @@ import { getStoreSettings } from '../api';
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { itemCount, subtotal, setIsCartOpen, storeSettings } = useCart();
+  const { itemCount, subtotal, setIsCartOpen, storeSettings, showStoreClosedModal } = useCart();
   const { user, logout, setIsAuthModalOpen, isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdown, setUserDropdown] = useState(false);
@@ -67,7 +67,15 @@ export default function Navbar() {
       {/* Top micro bar: Store Status + Hotline + Delivery Area */}
       <div className="bg-[#08090E] border-b border-amber-500/10 py-1.5 px-4 sm:px-6 lg:px-8 text-[11px] text-slate-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div 
+            onClick={() => {
+              if (storeSettings && storeSettings.is_currently_open === false) {
+                showStoreClosedModal();
+              }
+            }}
+            className={`flex items-center gap-2 ${storeSettings && storeSettings.is_currently_open === false ? 'cursor-pointer hover:text-amber-300 transition' : ''}`}
+            title={storeSettings && storeSettings.is_currently_open === false ? 'Bấm để xem thông báo giờ mở cửa' : ''}
+          >
             <span
               className={`w-2 h-2 rounded-full ${
                 storeSettings?.is_currently_open ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
@@ -76,7 +84,7 @@ export default function Navbar() {
             <span className="font-semibold text-slate-300">
               {storeSettings?.is_currently_open
                 ? `Đang Mở Cửa (${storeSettings?.open_time || '08:00'} - ${storeSettings?.close_time || '23:00'})`
-                : 'Tạm Nghỉ'}
+                : '🔴 Tạm Nghỉ (Xem thông báo)'}
             </span>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="hidden sm:inline text-amber-300/90 font-medium">

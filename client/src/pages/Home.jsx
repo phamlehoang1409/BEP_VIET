@@ -21,7 +21,7 @@ import { useCart } from '../context/CartContext';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { storeSettings } = useCart();
+  const { storeSettings, showStoreClosedModal } = useCart();
   const [foods, setFoods] = useState([]);
   const [categories, setCategories] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -136,6 +136,40 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* CLOSED / TAM NGHI ALERT BANNER ON HOME */}
+      {storeSettings && storeSettings.is_currently_open === false && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div 
+            onClick={() => showStoreClosedModal()}
+            className="p-4 sm:p-5 rounded-3xl bg-rose-50 hover:bg-rose-100/70 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm transition cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-lg shrink-0 shadow-md shadow-rose-500/20">
+                🔴
+              </div>
+              <div>
+                <h4 className="font-black text-sm sm:text-base text-rose-700">
+                  Bếp Việt Hiện Đang Tạm Nghỉ (Giờ mở cửa: {storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'})
+                </h4>
+                <p className="text-xs text-rose-800/80 mt-0.5">
+                  Quán tạm ngưng nhận đơn mới. Quý khách có thể xem trước thực đơn món ngon hoặc bấm vào đây để xem chi tiết!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                showStoreClosedModal();
+              }}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition active:scale-95 shrink-0"
+            >
+              Xem Chi Tiết
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* PROMOTIONAL TICKER / FEATURES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from './Toast';
 
 export default function FoodDetailModal({ food, onClose }) {
-  const { addToCart, storeSettings } = useCart();
+  const { addToCart, storeSettings, showStoreClosedModal } = useCart();
   const { showToast } = useToast();
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
@@ -14,11 +14,7 @@ export default function FoodDetailModal({ food, onClose }) {
 
   const handleAddToCart = () => {
     if (storeSettings && storeSettings.is_currently_open === false) {
-      showToast(
-        `Quán hiện đang TẠM NGHỈ (${storeSettings.open_time || '08:00'} - ${storeSettings.close_time || '23:00'}), tạm thời chưa nhận đơn mới!`,
-        'error',
-        5000
-      );
+      showStoreClosedModal();
       return;
     }
     if (!food.is_available) {
@@ -162,11 +158,17 @@ export default function FoodDetailModal({ food, onClose }) {
           </div>
 
           <button
-            onClick={handleAddToCart}
-            disabled={!food.is_available || (storeSettings && storeSettings.is_currently_open === false)}
+            onClick={() => {
+              if (storeSettings && storeSettings.is_currently_open === false) {
+                showStoreClosedModal();
+                return;
+              }
+              handleAddToCart();
+            }}
+            disabled={!food.is_available && (storeSettings?.is_currently_open !== false)}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-2xl font-bold text-sm shadow-lg transition duration-200 ${
               storeSettings && storeSettings.is_currently_open === false
-                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                ? 'bg-rose-50 border border-rose-300 text-rose-600 hover:bg-rose-100 active:scale-95'
                 : food.is_available
                 ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25 active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
@@ -175,7 +177,7 @@ export default function FoodDetailModal({ food, onClose }) {
             <ShoppingBag className="w-4 h-4" />
             <span>
               {storeSettings && storeSettings.is_currently_open === false
-                ? '🔴 Quán Đang Tạm Nghỉ'
+                ? '🔴 Quán Đang Tạm Nghỉ (Xem chi tiết)'
                 : food.is_available
                 ? 'Thêm vào giỏ hàng'
                 : 'Món tạm hết'}
