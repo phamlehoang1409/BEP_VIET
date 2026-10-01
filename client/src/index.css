@@ -10,6 +10,14 @@
 
   body {
     overflow-x: hidden;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 

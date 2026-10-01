@@ -17,45 +17,73 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-[#FAF8F5] text-slate-800 antialiased selection:bg-orange-500 selection:text-white">
-    <div id="root"></div>
-    <script>
-      // Khóa click chuột phải trên toàn bộ trang web
-      document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }, true);
 
-      // Khóa phím F11, F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
-      window.addEventListener('keydown', function(e) {
-        // F11 (Fullscreen)
-        if (e.key === 'F11' || e.code === 'F11' || e.keyCode === 122) {
-          e.preventDefault();
-          e.stopPropagation();
+    <!-- Khóa click chuột phải, F11 & DevTools ngay từ lúc bắt đầu tải DOM -->
+    <script>
+      (function() {
+        function blockEvent(e) {
+          if (!e) e = window.event;
+          if (e) {
+            try { if (e.preventDefault) e.preventDefault(); } catch (err) {}
+            try { if (e.stopPropagation) e.stopPropagation(); } catch (err) {}
+            try { if (e.stopImmediatePropagation) e.stopImmediatePropagation(); } catch (err) {}
+            e.returnValue = false;
+          }
           return false;
         }
-        // F12 (Inspect DevTools)
-        if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
+
+        // Khóa bất biến thuộc tính oncontextmenu chống extension ghi đè
+        try {
+          Object.defineProperty(document, 'oncontextmenu', {
+            get: function() { return blockEvent; },
+            set: function() { return false; },
+            configurable: false
+          });
+          Object.defineProperty(window, 'oncontextmenu', {
+            get: function() { return blockEvent; },
+            set: function() { return false; },
+            configurable: false
+          });
+        } catch (err) {
+          document.oncontextmenu = blockEvent;
+          window.oncontextmenu = blockEvent;
         }
-        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (Inspect Elements/Console)
-        if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-        // Ctrl+U (View Source)
-        if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) {
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }
-      }, true);
+
+        // Bắt và hủy toàn bộ sự kiện click chuột phải ở cả 2 pha Capture và Bubble
+        ['contextmenu', 'auxclick'].forEach(function(evt) {
+          window.addEventListener(evt, blockEvent, true);
+          document.addEventListener(evt, blockEvent, true);
+          window.addEventListener(evt, blockEvent, false);
+          document.addEventListener(evt, blockEvent, false);
+        });
+
+        // Bắt chuột phải qua mousedown, mouseup, pointerdown (button 2)
+        ['mousedown', 'mouseup', 'pointerdown', 'pointerup'].forEach(function(evt) {
+          window.addEventListener(evt, function(e) {
+            if (e && (e.button === 2 || e.which === 3)) {
+              blockEvent(e);
+            }
+          }, true);
+          document.addEventListener(evt, function(e) {
+            if (e && (e.button === 2 || e.which === 3)) {
+              blockEvent(e);
+            }
+          }, true);
+        });
+
+        // Khóa phím F11 (Fullscreen), F12 (Inspect DevTools), Ctrl+Shift+I/J/C, Ctrl+U (View Source)
+        window.addEventListener('keydown', function(e) {
+          if (e.key === 'F11' || e.code === 'F11' || e.keyCode === 122) return blockEvent(e);
+          if (e.key === 'F12' || e.code === 'F12' || e.keyCode === 123) return blockEvent(e);
+          if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].indexOf(e.key) !== -1) return blockEvent(e);
+          if (e.ctrlKey && (e.key === 'u' || e.key === 'U')) return blockEvent(e);
+          if (e.ctrlKey && (e.key === 's' || e.key === 'S')) return blockEvent(e);
+        }, true);
+      })();
     </script>
+  </head>
+  <body class="bg-[#FAF8F5] text-slate-800 antialiased selection:bg-orange-500 selection:text-white select-none" oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
+    <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Automatic Service Worker cleanup and registration with cache busting

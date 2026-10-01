@@ -143,38 +143,47 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <ToastProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Customer Storefront Routes */}
-                <Route element={<CustomerLayout />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/menu" element={<Menu />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/order-success/:id" element={<OrderSuccess />} />
-                  <Route path="/orders" element={<MyOrders />} />
-                </Route>
+            <div
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+              }}
+              className="min-h-screen select-none"
+            >
+              <BrowserRouter>
+                <Routes>
+                  {/* Customer Storefront Routes */}
+                  <Route element={<CustomerLayout />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/menu" element={<Menu />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/order-success/:id" element={<OrderSuccess />} />
+                    <Route path="/orders" element={<MyOrders />} />
+                  </Route>
 
-                {/* Block /admin/login - kicks unauthorized visitors out to homepage */}
-                <Route path="/admin/login" element={<Navigate to="/" replace />} />
+                  {/* Block /admin/login - kicks unauthorized visitors out to homepage */}
+                  <Route path="/admin/login" element={<Navigate to="/" replace />} />
 
-                {/* Secret Merchant Admin Portals (Only known to the shop owner) */}
-                <Route path="/chu-quan-1409" element={<AdminLogin />} />
-                <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
+                  {/* Secret Merchant Admin Portals (Only known to the shop owner) */}
+                  <Route path="/chu-quan-1409" element={<AdminLogin />} />
+                  <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
 
-                {/* Separated Merchant Admin Routes (Protected by AdminLayout) */}
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="foods" element={<FoodManagement />} />
-                  <Route path="orders" element={<OrderManagement />} />
-                  <Route path="coupons" element={<CouponManagement />} />
-                  <Route path="reviews" element={<ReviewManagement />} />
-                  <Route path="chat" element={<AdminChat />} />
-                </Route>
+                  {/* Separated Merchant Admin Routes (Protected by AdminLayout) */}
+                  <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="foods" element={<FoodManagement />} />
+                    <Route path="orders" element={<OrderManagement />} />
+                    <Route path="coupons" element={<CouponManagement />} />
+                    <Route path="reviews" element={<ReviewManagement />} />
+                    <Route path="chat" element={<AdminChat />} />
+                  </Route>
 
-                {/* Fallback */}
-                <Route path="*" element={<Home />} />
-              </Routes>
-            </BrowserRouter>
+                  {/* Fallback */}
+                  <Route path="*" element={<Home />} />
+                </Routes>
+              </BrowserRouter>
+            </div>
           </ToastProvider>
         </CartProvider>
       </AuthProvider>
