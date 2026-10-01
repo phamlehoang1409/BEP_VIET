@@ -55,6 +55,9 @@ export default function OrderManagement() {
   const [customShippingFee, setCustomShippingFee] = useState('');
   const [updatingFee, setUpdatingFee] = useState(false);
 
+  // Set of order IDs where customer declared payment via Techcombank
+  const [declaredOrderIds, setDeclaredOrderIds] = useState(new Set());
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -94,12 +97,24 @@ export default function OrderManagement() {
       );
     };
 
+    const handleDeclaredPayment = (data) => {
+      showToast(
+        `🔔 KHÁCH BÁO ĐÃ CK: Đơn #${data.orderCode} (${formatVND(data.amount)})! Vui lòng kiểm tra tài khoản Techcombank 19073268561011.`,
+        'info',
+        12000
+      );
+      playNewOrderChime();
+      setDeclaredOrderIds((prev) => new Set([...prev, data.orderId]));
+    };
+
     socket.on('new_order', handleNewOrder);
     socket.on('order_status_updated', handleStatusUpdate);
+    socket.on('customer_declared_payment', handleDeclaredPayment);
 
     return () => {
       socket.off('new_order', handleNewOrder);
       socket.off('order_status_updated', handleStatusUpdate);
+      socket.off('customer_declared_payment', handleDeclaredPayment);
     };
   }, []);
 
@@ -311,15 +326,43 @@ export default function OrderManagement() {
               >
                 {/* PENDING BANNER & INSTANT APPROVE BUTTON */}
                 {isPending && (
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-pulse">
+                  <div
+                    className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                      declaredOrderIds.has(order.id)
+                        ? 'bg-rose-500/15 border-rose-500/50 animate-pulse'
+                        : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                        ? 'bg-amber-500/15 border-amber-500/40'
+                        : 'bg-amber-500/10 border-amber-500/30 animate-pulse'
+                    }`}
+                  >
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xl">🔔</span>
+                      <span className="text-2xl shrink-0">
+                        {declaredOrderIds.has(order.id)
+                          ? '🔥'
+                          : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                          ? '💳'
+                          : '🔔'}
+                      </span>
                       <div>
-                        <h4 className="text-xs font-black text-amber-300">
-                          ĐƠN HÀNG MỚI ĐANG CHỜ DUYỆT!
+                        <h4
+                          className={`text-xs font-black ${
+                            declaredOrderIds.has(order.id) ? 'text-rose-300' : 'text-amber-300'
+                          }`}
+                        >
+                          {declaredOrderIds.has(order.id)
+                            ? 'KHÁCH BÁO ĐÃ CHUYỂN KHOẢN XONG!'
+                            : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                            ? `ĐƠN CHUYỂN KHOẢN TCB: ${formatVND(order.total_amount)}`
+                            : 'ĐƠN HÀNG MỚI ĐANG CHỜ DUYỆT!'}
                         </h4>
-                        <p className="text-[11px] text-amber-200/80">
-                          Khách hàng đang chờ bạn xác nhận để tính là đặt đơn thành công.
+                        <p
+                          className={`text-[11px] ${
+                            declaredOrderIds.has(order.id) ? 'text-rose-200' : 'text-amber-200/80'
+                          }`}
+                        >
+                          {['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                            ? 'Vui lòng kiểm tra biến động số dư Techcombank (19073268561011) trước khi bấm Duyệt.'
+                            : 'Khách hàng đang chờ bạn xác nhận để tính là đặt đơn thành công.'}
                         </p>
                       </div>
                     </div>
@@ -327,10 +370,16 @@ export default function OrderManagement() {
                     <button
                       onClick={() => handleConfirm(order.id)}
                       disabled={confirmingId === order.id}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition shrink-0"
                     >
                       <Zap className="w-4 h-4 fill-slate-950" />
-                      <span>{confirmingId === order.id ? 'Đang duyệt...' : '⚡ XÁC NHẬN ĐƠN HÀNG NGAY'}</span>
+                      <span>
+                        {confirmingId === order.id
+                          ? 'Đang duyệt...'
+                          : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                          ? '⚡ ĐÃ NHẬN TIỀN - DUYỆT BẾP NẤU'
+                          : '⚡ XÁC NHẬN ĐƠN HÀNG NGAY'}
+                      </span>
                     </button>
                   </div>
                 )}
@@ -487,6 +536,11 @@ export default function OrderManagement() {
                   <div className="flex flex-wrap items-center gap-3.5 text-slate-400">
                     <span>
                       Thanh toán: <strong className="text-white uppercase">{order.payment_method}</strong>
+                      {['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method) && isPending && (
+                        <span className="ml-2 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                          ⚠️ Check TCB 19073268561011
+                        </span>
+                      )}
                     </span>
 
                     {/* Adjustable Shipping Fee badge */}

@@ -667,4 +667,71 @@ router.post('/cleanup-old', requireAdmin, async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/switch-cod - Khách đổi sang trả Tiền Mặt khi nhận hàng (COD)
+router.patch('/:id/switch-cod', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!supabase) return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({
+        payment_method: 'COD',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
+
+    if (error || !updated) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+    const formatted = { ...updated, items: updated.order_items || [] };
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', formatted);
+    }
+    return res.json({
+      success: true,
+      order: formatted,
+      message: 'Đã đổi sang thanh toán Tiền Mặt (COD) thành công! Shipper sẽ thu tiền khi giao.'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/orders/:id/notify-transfer - Khách bấm "Tôi đã chuyển khoản" -> Báo chủ quán check Techcombank
+router.patch('/:id/notify-transfer', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!supabase) return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !updated) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+    const formatted = { ...updated, items: updated.order_items || [] };
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('customer_declared_payment', {
+        orderId: updated.id,
+        orderCode: updated.order_code,
+        customerName: updated.customer_name,
+        amount: updated.total_amount
+      });
+      io.to(`room_${updated.customer_phone}`).emit('order_status_updated', formatted);
+    }
+
+    return res.json({
+      success: true,
+      order: formatted,
+      message: 'Đã gửi thông báo tới Bếp Việt! Quán đang kiểm tra tài khoản Techcombank.'
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

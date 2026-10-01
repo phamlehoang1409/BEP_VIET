@@ -257,6 +257,16 @@ export const cleanupOldOrders = () =>
     method: 'POST'
   });
 
+export const switchToCod = (id) =>
+  request(`/orders/${id}/switch-cod`, {
+    method: 'PATCH'
+  });
+
+export const notifyTransfer = (id) =>
+  request(`/orders/${id}/notify-transfer`, {
+    method: 'PATCH'
+  });
+
 // --- Store Settings API ---
 export const getStoreSettings = () => request('/settings');
 

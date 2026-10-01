@@ -12,40 +12,48 @@ import {
   Smartphone,
   CreditCard,
   Banknote,
-  RotateCw
+  RotateCw,
+  Eye,
+  Loader2
 } from 'lucide-react';
 import { formatVND } from '../utils/vietnamData';
 import { useToast } from './Toast';
+import { notifyTransfer } from '../api';
 
 export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCompleted }) {
   const { showToast } = useToast();
   const [copiedField, setCopiedField] = useState(null);
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes countdown (Shopee standard)
-  const [isPaidConfirmed, setIsPaidConfirmed] = useState(
-    order?.status !== 'cancelled' &&
-      (order?.payment_status === 'paid' ||
-        order?.status === 'confirmed' ||
-        order?.status === 'preparing' ||
-        order?.status === 'delivering' ||
-        order?.status === 'completed')
-  );
+  const [submittingVerification, setSubmittingVerification] = useState(false);
+  const [switchingCod, setSwitchingCod] = useState(false);
 
-  // Sync paid state if order updates
-  useEffect(() => {
-    if (order?.status === 'cancelled') {
-      setIsPaidConfirmed(false);
-      return;
+  // Verification state: customer declared they transferred, waiting for shop owner to confirm balance
+  const [isVerifying, setIsVerifying] = useState(() => {
+    try {
+      return sessionStorage.getItem(`declared_payment_${order?.id}`) === 'true';
+    } catch {
+      return false;
     }
-    if (
-      order?.payment_status === 'paid' ||
+  });
+
+  // Strictly check if shop owner confirmed the payment / order
+  const isPaidConfirmed =
+    order?.status !== 'cancelled' &&
+    (order?.payment_status === 'paid' ||
       order?.status === 'confirmed' ||
       order?.status === 'preparing' ||
       order?.status === 'delivering' ||
-      order?.status === 'completed'
-    ) {
-      setIsPaidConfirmed(true);
+      order?.status === 'completed');
+
+  // Sync if order status changes
+  useEffect(() => {
+    if (isPaidConfirmed) {
+      setIsVerifying(false);
+      try {
+        sessionStorage.removeItem(`declared_payment_${order?.id}`);
+      } catch {}
     }
-  }, [order?.status, order?.payment_status]);
+  }, [isPaidConfirmed, order?.id]);
 
   // 15-minute countdown timer
   useEffect(() => {
@@ -68,7 +76,7 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
   const transferContent = `BV ${order.order_code}`;
   const amount = Number(order.total_amount) || 0;
 
-  // Use the exact official Techcombank QR image uploaded by the shop owner
+  // Exact official Techcombank QR image uploaded by shop owner
   const qrImageSrc = '/owner_qr.png';
 
   const handleCopy = (text, fieldName) => {
@@ -94,10 +102,36 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
     }
   };
 
-  const handleUserConfirmed = () => {
-    setIsPaidConfirmed(true);
-    showToast('Bếp Việt đã ghi nhận thông báo chuyển khoản của Quý khách! Bếp đang kiểm tra và chuẩn bị món ngay.', 'success', 6000);
-    if (onPaymentCompleted) onPaymentCompleted();
+  const handleUserConfirmed = async () => {
+    if (submittingVerification) return;
+    try {
+      setSubmittingVerification(true);
+      await notifyTransfer(order.id);
+      setIsVerifying(true);
+      try {
+        sessionStorage.setItem(`declared_payment_${order.id}`, 'true');
+      } catch {}
+      showToast(
+        'Bếp Việt đã nhận được thông báo! Quán đang kiểm tra tài khoản Techcombank và sẽ duyệt đơn ngay khi nhận được tiền.',
+        'info',
+        7000
+      );
+      if (onPaymentCompleted) onPaymentCompleted();
+    } catch (err) {
+      showToast(err.message || 'Lỗi gửi thông báo chuyển khoản', 'error');
+    } finally {
+      setSubmittingVerification(false);
+    }
+  };
+
+  const handleSwitchCodClick = async () => {
+    if (switchingCod || !onSwitchToCod) return;
+    try {
+      setSwitchingCod(true);
+      await onSwitchToCod();
+    } finally {
+      setSwitchingCod(false);
+    }
   };
 
   return (
@@ -121,8 +155,18 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
           </div>
         </div>
 
-        {/* 15:00 Countdown Timer */}
-        {!isPaidConfirmed ? (
+        {/* Status indicator on header */}
+        {isPaidConfirmed ? (
+          <div className="flex items-center gap-1.5 bg-emerald-500 text-white px-3.5 py-1.5 rounded-2xl text-xs font-black self-start sm:self-auto shadow-md">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>ĐÃ XÁC NHẬN THANH TOÁN</span>
+          </div>
+        ) : isVerifying ? (
+          <div className="flex items-center gap-1.5 bg-amber-400 text-slate-950 px-3.5 py-1.5 rounded-2xl text-xs font-black self-start sm:self-auto shadow-md animate-pulse">
+            <Clock className="w-4 h-4" />
+            <span>ĐANG ĐỐI SOÁT TECHCOMBANK</span>
+          </div>
+        ) : (
           <div className="flex items-center gap-2 bg-black/25 backdrop-blur-md px-3.5 py-2 rounded-2xl self-start sm:self-auto border border-white/20">
             <Clock className="w-4 h-4 text-amber-300 animate-spin-slow shrink-0" />
             <div className="text-right">
@@ -134,28 +178,69 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
               </span>
             </div>
           </div>
-        ) : (
-          <div className="flex items-center gap-1.5 bg-emerald-500 text-white px-3.5 py-1.5 rounded-2xl text-xs font-black self-start sm:self-auto shadow-md">
-            <CheckCircle2 className="w-4 h-4" />
-            <span>ĐÃ XÁC NHẬN THANH TOÁN</span>
-          </div>
         )}
       </div>
 
       {/* Main Payment Section */}
       <div className="p-5 sm:p-7">
         {isPaidConfirmed ? (
-          /* Payment Success State */
+          /* Payment Success State (Shop owner approved) */
           <div className="text-center py-6 space-y-3">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-50">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center ring-8 ring-emerald-50 animate-scale-up">
               <CheckCircle2 className="w-10 h-10" />
             </div>
             <h4 className="text-xl font-black text-slate-900">
-              Đã Ghi Nhận Chuyển Khoản Thành Công!
+              Quán Đã Nhận Tiền & Đang Nấu Món!
             </h4>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Cảm ơn Quý khách! Đơn hàng <strong className="text-slate-800">#{order.order_code}</strong> trị giá <strong className="text-orange-600">{formatVND(amount)}</strong> đã được ghi nhận. Bếp đang bắt đầu chế biến món ăn ngay bây giờ.
+            <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+              Cảm ơn Quý khách! Bếp Việt đã kiểm tra số dư Techcombank và xác nhận nhận đủ{' '}
+              <strong className="text-emerald-700 font-bold">{formatVND(amount)}</strong> cho đơn hàng{' '}
+              <strong className="text-slate-900">#{order.order_code}</strong>. Bếp đang bắt đầu chế biến món ăn ngay bây giờ!
             </p>
+          </div>
+        ) : isVerifying ? (
+          /* Pending Verification State (Anti-Fraud protection) */
+          <div className="text-center py-6 px-4 space-y-4 bg-amber-50/70 rounded-3xl border border-amber-200 shadow-inner">
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 mx-auto flex items-center justify-center ring-8 ring-amber-50 animate-pulse">
+              <Clock className="w-9 h-9" />
+            </div>
+            <div className="inline-block px-3 py-1 rounded-full bg-amber-200/80 text-amber-900 text-xs font-black uppercase tracking-wider">
+              ⏳ ĐANG CHỜ QUÁN ĐỐI SOÁT TECHCOMBANK
+            </div>
+            <h4 className="text-lg sm:text-xl font-black text-slate-900">
+              Bếp Việt Đang Kiểm Tra Biến Động Số Dư
+            </h4>
+            <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+              Hệ thống đã gửi thông báo đến chủ quán Bếp Việt. Quán đang mở App Techcombank để kiểm tra số tiền{' '}
+              <strong className="text-orange-600 font-bold">{formatVND(amount)}</strong> với nội dung{' '}
+              <strong className="text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-amber-300">
+                {transferContent}
+              </strong>.
+              <br />
+              <span className="text-amber-900 font-bold block mt-2">
+                👉 Ngay khi tài khoản báo có, Bếp sẽ bấm Duyệt đơn và bắt đầu nấu ngay!
+              </span>
+            </p>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5 max-w-md mx-auto">
+              {onSwitchToCod && (
+                <button
+                  onClick={handleSwitchCodClick}
+                  disabled={switchingCod}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <Banknote className="w-4 h-4" />
+                  <span>{switchingCod ? 'Đang chuyển...' : 'Chưa chuyển được? Đổi sang Tiền Mặt (COD)'}</span>
+                </button>
+              )}
+              <button
+                onClick={() => setIsVerifying(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-300 transition shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                <span>Xem lại mã QR & Thông tin CK</span>
+              </button>
+            </div>
           </div>
         ) : (
           /* Active QR Payment Gateway */
@@ -265,7 +350,7 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
                   <div className="pr-2">
                     <span className="text-slate-600 block">Nội dung chuyển khoản:</span>
                     <span className="text-[10px] text-rose-600 font-bold block">
-                      * Bắt buộc ghi đúng để tự động nhận đơn
+                      * Bắt buộc ghi đúng để quán đối soát chính xác
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -304,18 +389,24 @@ export default function VietQRPaymentGateway({ order, onSwitchToCod, onPaymentCo
               <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                 <button
                   onClick={handleUserConfirmed}
+                  disabled={submittingVerification}
                   className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs shadow-lg shadow-emerald-500/25 transition active:scale-95 flex items-center justify-center gap-2"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Tôi Đã Chuyển Khoản Xong</span>
+                  {submittingVerification ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  <span>{submittingVerification ? 'Đang gửi thông báo...' : 'Tôi Đã Chuyển Khoản Xong'}</span>
                 </button>
 
                 {onSwitchToCod && (
                   <button
-                    onClick={onSwitchToCod}
+                    onClick={handleSwitchCodClick}
+                    disabled={switchingCod}
                     className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
                   >
-                    Đổi Sang Trả Tiền Mặt (COD)
+                    {switchingCod ? 'Đang chuyển...' : 'Đổi Sang Trả Tiền Mặt (COD)'}
                   </button>
                 )}
               </div>

@@ -18,7 +18,7 @@ import {
   XCircle,
   ExternalLink
 } from 'lucide-react';
-import { getOrderById, getSocket, cancelOrder } from '../api';
+import { getOrderById, getSocket, cancelOrder, switchToCod } from '../api';
 import { formatVND } from '../utils/vietnamData';
 import { useChat } from '../context/ChatContext';
 import { useToast } from '../components/Toast';
@@ -68,6 +68,19 @@ export default function OrderSuccess() {
       showToast(err.message || 'Không thể hủy đơn hàng', 'error');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleSwitchToCod = async () => {
+    if (!order) return;
+    try {
+      const res = await switchToCod(order.id);
+      if (res.success && res.order) {
+        setOrder(res.order);
+        showToast('Đã chuyển sang thanh toán Tiền Mặt (COD) thành công!', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Không thể đổi phương thức thanh toán', 'error');
     }
   };
 
@@ -221,6 +234,7 @@ export default function OrderSuccess() {
           <VietQRPaymentGateway
             order={order}
             onPaymentCompleted={syncOrder}
+            onSwitchToCod={handleSwitchToCod}
           />
         )}
 
