@@ -34,72 +34,157 @@ export default function AIFoodAssistantModal({ isOpen, onClose, foods = [] }) {
   const generateRecommendation = (mood, budget, prompt = '') => {
     setAnalyzing(true);
     setTimeout(() => {
-      let mainDish = null;
-      let sideDish = null;
+      const availFoods = foods.filter(f => f.is_available !== 0 && f.is_available !== false);
+      if (availFoods.length === 0) {
+        setAnalyzing(false);
+        return;
+      }
 
+      // Helper classification
+      const isDrink = (f) => {
+        const n = f.name.toLowerCase();
+        return f.category_id === 4 || n.includes('trà') || n.includes('nước') || n.includes('cà phê') || n.includes('soda') || n.includes('chè') || n.includes('pepsi') || n.includes('coca');
+      };
+
+      const isSnack = (f) => {
+        const n = f.name.toLowerCase();
+        return f.category_id === 5 || f.category_id === 6 || n.includes('nem') || n.includes('gỏi') || n.includes('khoai') || n.includes('bánh tráng') || n.includes('trứng') || n.includes('xúc xích') || n.includes('kim chi') || n.includes('topping');
+      };
+
+      const isMain = (f) => !isDrink(f) && (!isSnack(f) || f.price >= 40000 || f.category_id === 1 || f.category_id === 2 || f.category_id === 3);
+
+      const mains = availFoods.filter(isMain);
+      const drinks = availFoods.filter(isDrink);
+      const snacks = availFoods.filter(f => isSnack(f) || (!isMain(f) && !isDrink(f)));
+
+      const poolMains = mains.length > 0 ? mains : availFoods;
+      const poolDrinks = drinks.length > 0 ? drinks : availFoods;
+      const poolSnacks = snacks.length > 0 ? snacks : availFoods;
+
+      // Filter candidates for primary main dish based on mood
+      let candidateMains = [...poolMains];
       const lowerPrompt = prompt.toLowerCase();
 
-      // Rule-based intelligent matcher
       if (lowerPrompt.includes('bò') || lowerPrompt.includes('bo')) {
-        mainDish = foods.find(f => f.name.toLowerCase().includes('bò') && f.is_available) || foods[0];
+        const matched = poolMains.filter(f => f.name.toLowerCase().includes('bò'));
+        if (matched.length > 0) candidateMains = matched;
       } else if (lowerPrompt.includes('xá xíu') || lowerPrompt.includes('xa xiu')) {
-        mainDish = foods.find(f => f.name.toLowerCase().includes('xá xíu') && f.is_available) || foods[0];
-      } else if (lowerPrompt.includes('hải sản') || lowerPrompt.includes('hai san') || lowerPrompt.includes('cay')) {
-        mainDish = foods.find(f => f.spicy_level > 0 && f.is_available) || foods[0];
+        const matched = poolMains.filter(f => f.name.toLowerCase().includes('xá xíu'));
+        if (matched.length > 0) candidateMains = matched;
+      } else if (lowerPrompt.includes('cay') || lowerPrompt.includes('sa tế')) {
+        const matched = poolMains.filter(f => f.spicy_level > 0);
+        if (matched.length > 0) candidateMains = matched;
       } else {
         switch (mood) {
-          case 'spicy':
-            mainDish = foods.find(f => f.spicy_level > 0 && f.is_available) || foods.find(f => f.name.toLowerCase().includes('hải sản')) || foods[0];
+          case 'spicy': {
+            const matched = poolMains.filter(f => f.spicy_level > 0 || f.name.toLowerCase().includes('cay'));
+            if (matched.length > 0) candidateMains = matched;
             break;
-          case 'protein':
-            mainDish = foods.find(f => f.name.toLowerCase().includes('bò') && f.is_available) || foods[0];
+          }
+          case 'protein': {
+            const matched = poolMains.filter(f => f.name.toLowerCase().includes('bò') || f.name.toLowerCase().includes('thịt') || f.name.toLowerCase().includes('sườn') || f.name.toLowerCase().includes('chả'));
+            if (matched.length > 0) candidateMains = matched;
             break;
-          case 'budget':
-            const sortedByPrice = [...foods].filter(f => f.is_available).sort((a, b) => a.price - b.price);
-            mainDish = sortedByPrice[0] || foods[0];
+          }
+          case 'budget': {
+            candidateMains.sort((a, b) => a.price - b.price);
             break;
-          case 'vip_combo':
-            mainDish = foods.find(f => f.is_featured === 1 && f.is_available) || foods[0];
+          }
+          case 'vip_combo': {
+            // Sort by premium / featured first
+            candidateMains.sort((a, b) => (b.is_featured || 0) - (a.is_featured || 0) || b.price - a.price);
             break;
+          }
           case 'late_night':
-          default:
-            mainDish = foods.find(f => f.name.toLowerCase().includes('xá xíu') && f.is_available) || foods[0];
+          default: {
+            const matched = poolMains.filter(f => f.name.toLowerCase().includes('bánh mì') || f.name.toLowerCase().includes('mì') || f.name.toLowerCase().includes('phở'));
+            if (matched.length > 0) candidateMains = matched;
+            break;
+          }
         }
       }
 
-      // Find beverage or side dish if budget permits
-      const remainingBudget = budget - (mainDish?.price || 0);
-      const drinksAndSides = foods.filter(f => f.id !== mainDish?.id && f.is_available && f.price <= remainingBudget);
+      // Optimal Set Combiner: maximize total value <= budget
+      let bestCombination = [];
+      let maxScore = -1;
 
-      if (drinksAndSides.length > 0 && (mood === 'vip_combo' || remainingBudget >= 15000)) {
-        sideDish = drinksAndSides[Math.floor(Math.random() * drinksAndSides.length)];
+      // Sample a few suitable main dishes
+      const topMains = candidateMains.slice(0, 8);
+
+      topMains.forEach(main => {
+        if (main.price > budget) return;
+
+        let curItems = [main];
+        let currentTotal = main.price;
+        let remBudget = budget - currentTotal;
+
+        // 1. Try to add a suitable drink if budget permits
+        const affordableDrinks = poolDrinks
+          .filter(d => d.id !== main.id && d.price <= remBudget)
+          .sort((a, b) => b.price - a.price);
+
+        if (affordableDrinks.length > 0 && (budget >= 60000 || mood === 'vip_combo')) {
+          const chosenDrink = affordableDrinks[Math.floor(Math.random() * Math.min(2, affordableDrinks.length))];
+          curItems.push(chosenDrink);
+          currentTotal += chosenDrink.price;
+          remBudget = budget - currentTotal;
+        }
+
+        // 2. Try to add 1 or more snacks / sides / desserts with remaining budget
+        const affordableSnacks = poolSnacks
+          .filter(s => !curItems.some(item => item.id === s.id) && s.price <= remBudget)
+          .sort((a, b) => b.price - a.price);
+
+        for (const snack of affordableSnacks) {
+          if (snack.price <= remBudget) {
+            curItems.push(snack);
+            currentTotal += snack.price;
+            remBudget -= snack.price;
+            if (curItems.length >= 4) break; // Max 4 items in set
+          }
+        }
+
+        // Score based on how close total is to budget + item count
+        const fillRatio = currentTotal / budget; // closer to 1 is better
+        const score = fillRatio * 100 + curItems.length * 10;
+
+        if (score > maxScore) {
+          maxScore = score;
+          bestCombination = curItems;
+        }
+      });
+
+      // Fallback if no full set found
+      if (bestCombination.length === 0) {
+        const sorted = [...availFoods].sort((a, b) => a.price - b.price);
+        bestCombination = [sorted[0] || availFoods[0]];
       }
 
-      const items = [mainDish, sideDish].filter(Boolean);
+      const items = bestCombination;
       const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
 
       let aiReasoning = '';
       if (mood === 'spicy') {
-        aiReasoning = 'AI đã chọn cho bạn đĩa mì đậm sốt sa tế cay nồng đánh thức vị giác cùng hương thơm xém cạnh bùng nổ năng lượng!';
+        aiReasoning = `Set Cay Nồng Bùng Nổ (${items.length} món) đánh thức vị giác với món chính đẫm sốt đậm đà, kết hợp nước mát và đồ ăn kèm xoa dịu vị cay hoàn hảo!`;
       } else if (mood === 'protein') {
-        aiReasoning = 'Set ăn giàu đạm với thịt bò/xá xíu tuyển chọn kết hợp trứng lòng đào béo ngậy, nạp đầy đủ dinh dưỡng cho ngày dài!';
+        aiReasoning = `Set Nạp Đạm Năng Lượng (${items.length} món) dồi dào thịt & dinh dưỡng, phối hợp đầy đủ món chính chuẩn vị, đồ ăn kèm giòn rụm và đồ uống thanh nhiệt!`;
       } else if (mood === 'budget') {
-        aiReasoning = 'Set ăn tối ưu chi phí cực tốt mà vẫn đảm bảo độ ngon đậm đà, no căng bụng giao hỏa tốc tận cửa!';
+        aiReasoning = `Set Tiết Kiệm Tối Ưu (${items.length} món) cân đối chi phí chuẩn ngon-bổ-rẻ, vừa vặn ngân sách ${formatVND(budget)} giao hỏa tốc nóng hổi!`;
       } else if (mood === 'vip_combo') {
-        aiReasoning = 'Combo Thượng Hạng đầy đủ món chính chuẩn vị cùng đồ uống giải khát mát lạnh, trải nghiệm ẩm thực trọn vẹn nhất!';
+        aiReasoning = `Combo Hoàng Gia Đại Tiệc VIP (${items.length} món) đầy đủ trọn gói Món chính thượng hạng + Đồ uống + Khai vị / Ăn vặt giòn ngon, tối đa trải nghiệm ẩm thực đỉnh cao!`;
       } else {
-        aiReasoning = 'Khẩu phần ăn đêm nhẹ nhàng, không gây nặng bụng, đóng hộp giữ nhiệt vàng bọc bạc đảm bảo nóng giòn!';
+        aiReasoning = `Set Ăn Đêm Ấm Bụng (${items.length} món) dịu nhẹ, cân đối năng lượng và đóng hộp giữ nhiệt vàng bọc bạc đảm bảo nóng giòn thơm nức!`;
       }
 
       setRecommendedSet({
-        title: mood === 'vip_combo' ? '👑 Set Bếp Việt Hoàng Gia' : '✨ Set Gợi Ý Hoàn Hảo Dành Riêng Cho Bạn',
+        title: mood === 'vip_combo' || totalPrice >= 100000 ? '👑 Set Đại Tiệc Bếp Việt VIP' : '✨ Set Gợi Ý Hoàn Hảo Cho Bạn',
         items,
         totalPrice,
         reasoning: aiReasoning
       });
 
       setAnalyzing(false);
-    }, 350);
+    }, 300);
   };
 
   const handleAddSetToCart = () => {
@@ -173,15 +258,15 @@ export default function AIFoodAssistantModal({ isOpen, onClose, foods = [] }) {
           </div>
 
           {/* Budget Filter */}
-          <div className="space-y-1.5 bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800">
+          <div className="space-y-2.5 bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800">
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-slate-300">2. Ngân sách dự kiến:</span>
-              <span className="text-amber-400 font-black">{formatVND(maxBudget)}</span>
+              <span className="text-amber-400 font-black text-sm">{formatVND(maxBudget)}</span>
             </div>
             <input
               type="range"
               min="35000"
-              max="150000"
+              max="200000"
               step="5000"
               value={maxBudget}
               onChange={(e) => {
@@ -191,6 +276,26 @@ export default function AIFoodAssistantModal({ isOpen, onClose, foods = [] }) {
               }}
               className="w-full accent-amber-500 cursor-pointer"
             />
+            {/* Quick preset chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+              {[50000, 80000, 100000, 150000, 200000].map(val => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => {
+                    setMaxBudget(val);
+                    generateRecommendation(selectedMood, val, customPrompt);
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition whitespace-nowrap ${
+                    maxBudget === val
+                      ? 'bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/20'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  {val === 200000 ? '200k (Max)' : `${val / 1000}k`}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* AI Result Box */}
