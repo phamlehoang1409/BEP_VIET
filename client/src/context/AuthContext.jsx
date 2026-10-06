@@ -62,6 +62,7 @@ export function AuthProvider({ children }) {
     if (res.success && res.token) {
       setAdminToken(res.token);
       localStorage.setItem('bepviet_admin_token', res.token);
+      localStorage.setItem('bepviet_is_admin', 'true');
       return res.user;
     }
   };

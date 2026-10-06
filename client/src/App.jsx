@@ -181,11 +181,21 @@ export default function App() {
             <ToastProvider>
               <div
                 onContextMenu={(e) => {
+                  try {
+                    const isAdmin = Boolean(
+                      localStorage.getItem('bepviet_admin_token') ||
+                      localStorage.getItem('bepviet_is_admin') === 'true' ||
+                      window.location.search.includes('dev=1') ||
+                      window.location.pathname.startsWith('/admin') ||
+                      window.location.pathname.includes('chu-quan')
+                    );
+                    if (isAdmin) return true;
+                  } catch (err) {}
                   e.preventDefault();
                   e.stopPropagation();
                   return false;
                 }}
-                className="min-h-screen select-none bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
+                className="min-h-screen bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
               >
                 <BrowserRouter>
                   <Routes>

@@ -3,8 +3,30 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-// Khóa click chuột phải trên toàn bộ trang web (Cả window và document, phase capture)
+// Check if current device or user is Admin
+const isAdminDevice = () => {
+  try {
+    const adminToken = localStorage.getItem('bepviet_admin_token');
+    const userStr = localStorage.getItem('bepviet_user');
+    const isAdminFlag = localStorage.getItem('bepviet_is_admin');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isDevQuery = window.location.search.includes('dev=1') || window.location.search.includes('admin=1');
+    const isAdminPath = window.location.pathname.startsWith('/admin') || 
+                        window.location.pathname.includes('chu-quan') || 
+                        window.location.pathname.includes('secret');
+
+    return Boolean(adminToken || (user && user.role === 'admin') || isAdminFlag === 'true' || isAdminPath || isLocalhost || isDevQuery);
+  } catch (e) {
+    return false;
+  }
+};
+
+// Khóa click chuột phải trên toàn bộ trang web cho khách thường (Admin không bị khóa)
 const blockRightClick = (e) => {
+  if (isAdminDevice()) {
+    return true; // Cho phép Admin dùng chuột phải & devtools
+  }
   if (e) {
     try { if (e.preventDefault) e.preventDefault(); } catch (err) {}
     try { if (e.stopPropagation) e.stopPropagation(); } catch (err) {}
@@ -21,19 +43,24 @@ const blockRightClick = (e) => {
 
 ['mousedown', 'pointerdown', 'mouseup'].forEach((evt) => {
   window.addEventListener(evt, (e) => {
+    if (isAdminDevice()) return;
     if (e && (e.button === 2 || e.which === 3)) {
       blockRightClick(e);
     }
   }, true);
   document.addEventListener(evt, (e) => {
+    if (isAdminDevice()) return;
     if (e && (e.button === 2 || e.which === 3)) {
       blockRightClick(e);
     }
   }, true);
 });
 
-// Khóa phím F11, F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+S
+// Khóa phím F11, F12, Ctrl+Shift+I/J/C, Ctrl+U, Ctrl+S cho khách (Admin được mở toàn bộ)
 window.addEventListener('keydown', (e) => {
+  if (isAdminDevice()) {
+    return; // Admin được bấm F12, Ctrl+Shift+I, F11 bình thường
+  }
   if (e.key === 'F11' || e.code === 'F11' || e.keyCode === 122) {
     return blockRightClick(e);
   }
