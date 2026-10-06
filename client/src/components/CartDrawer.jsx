@@ -18,6 +18,7 @@ export default function CartDrawer() {
     promoCode,
     promoMessage,
     applyPromo,
+    removePromo,
     total,
     storeSettings,
     showStoreClosedModal
@@ -255,8 +256,17 @@ export default function CartDrawer() {
                   <span className="font-bold text-slate-900 dark:text-white">{formatVND(subtotal)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                    <span>Giảm giá voucher ({promoCode}):</span>
+                  <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-bold">
+                    <div className="flex items-center gap-1.5">
+                      <span>Voucher ({promoCode}):</span>
+                      <button
+                        type="button"
+                        onClick={() => removePromo()}
+                        className="text-[10px] text-rose-500 hover:text-rose-600 underline font-normal ml-1"
+                      >
+                        (Gỡ)
+                      </button>
+                    </div>
                     <span>-{formatVND(discount)}</span>
                   </div>
                 )}

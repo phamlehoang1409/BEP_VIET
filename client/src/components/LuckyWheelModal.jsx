@@ -171,16 +171,24 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
           </span>
         </div>
 
-        {/* Wheel Graphic */}
-        <div className="relative w-60 h-60 mx-auto my-3 flex items-center justify-center">
+        {/* Wheel Graphic - Clickable for 1-tap spin */}
+        <div
+          onClick={!spinning && userSpins > 0 ? handleSpin : undefined}
+          className={`relative w-60 h-60 mx-auto my-3 flex items-center justify-center select-none touch-manipulation ${
+            !spinning && userSpins > 0 ? 'cursor-pointer group' : ''
+          }`}
+          title={!spinning && userSpins > 0 ? 'Bấm vào vòng quay để quay ngay!' : ''}
+        >
           {/* Top Pointer */}
-          <div className="absolute -top-3 z-30 transform -translate-x-1/2 left-1/2 drop-shadow-md">
+          <div className="absolute -top-3 z-30 transform -translate-x-1/2 left-1/2 drop-shadow-md pointer-events-none">
             <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[22px] border-t-amber-400 filter drop-shadow" />
           </div>
 
           {/* Rotating Wheel */}
           <div
-            className="w-full h-full rounded-full border-4 border-amber-400/80 shadow-2xl relative overflow-hidden"
+            className={`w-full h-full rounded-full border-4 border-amber-400/80 shadow-2xl relative overflow-hidden transition-all duration-300 ${
+              !spinning && userSpins > 0 ? 'group-hover:border-amber-300 group-hover:scale-[1.02]' : ''
+            }`}
             style={{
               transform: `rotate(${rotation}deg)`,
               transition: spinning
@@ -188,7 +196,7 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
                 : 'none'
             }}
           >
-            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 pointer-events-none">
               {WHEEL_SLICES.map((slice, idx) => {
                 const startAngle = idx * sliceAngle;
                 const endAngle = startAngle + sliceAngle;
@@ -223,20 +231,48 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
             </svg>
           </div>
 
-          {/* Center Spin Button */}
+          {/* Center Spin Button (1-Click) */}
           <button
-            onClick={handleSpin}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSpin();
+            }}
             disabled={spinning || userSpins <= 0}
-            className={`absolute z-20 w-16 h-16 rounded-full font-black text-xs shadow-2xl border-4 border-white transition flex flex-col items-center justify-center leading-none ${
+            className={`absolute z-20 w-16 h-16 rounded-full font-black text-xs shadow-2xl border-4 border-white transition flex flex-col items-center justify-center leading-none select-none touch-manipulation ${
               userSpins > 0
-                ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 hover:scale-105 active:scale-95 cursor-pointer'
+                ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 hover:scale-110 active:scale-95 cursor-pointer ring-4 ring-amber-400/30'
                 : 'bg-slate-700 text-slate-400 border-slate-600 opacity-80 cursor-not-allowed'
             }`}
           >
             <span>{spinning ? 'ĐANG' : userSpins > 0 ? 'QUAY' : 'HẾT'}</span>
-            <span className="text-[10px]">{spinning ? 'QUAY' : userSpins > 0 ? 'NGAY' : 'LƯỢT'}</span>
+            <span className="text-[10px] font-black">{spinning ? 'QUAY...' : userSpins > 0 ? 'NGAY' : 'LƯỢT'}</span>
           </button>
         </div>
+
+        {/* 1-CLICK SPIN PROMINENT BUTTON BELOW WHEEL */}
+        {userSpins > 0 && !result && (
+          <div className="my-2">
+            <button
+              type="button"
+              onClick={handleSpin}
+              disabled={spinning}
+              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-orange-500/25 transition flex items-center justify-center gap-2 cursor-pointer touch-manipulation disabled:opacity-60"
+            >
+              {spinning ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-spin text-slate-950" />
+                  <span>Đang Quay Thưởng...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-slate-950 animate-bounce" />
+                  <span>🎰 BẤM VÀO ĐÂY ĐỂ QUAY NGAY</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* RESULT DISPLAY */}
         {result && (

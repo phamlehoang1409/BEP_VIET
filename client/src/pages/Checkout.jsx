@@ -43,6 +43,7 @@ export default function Checkout() {
     promoCode,
     promoMessage,
     applyPromo,
+    removePromo,
     total,
     clearCart,
     showStoreClosedModal
@@ -137,7 +138,11 @@ export default function Checkout() {
     try {
       const res = await applyPromo(code);
       if (res.success) {
-        showToast(res.message || `Đã áp dụng mã ${code.toUpperCase()}!`, 'success');
+        if (res.replaced) {
+          showToast(`Đã đổi sang mã ${res.code} (thay thế mã ${res.previousCode} - Mỗi đơn áp dụng 1 mã)`, 'success', 5000);
+        } else {
+          showToast(res.message || `Đã áp dụng mã ${res.code}!`, 'success');
+        }
         setInputCoupon('');
       } else {
         showToast(res.message || 'Mã giảm giá không hợp lệ', 'error');
@@ -757,14 +762,59 @@ export default function Checkout() {
 
           {/* RIGHT: Order Summary & Coupon Picker */}
           <div className="lg:col-span-5 space-y-6 sticky top-24">
-            {/* COUPON & VOUCHER BOX */}
+            {/* COUPON & VOUCHER BOX (MỖI ĐƠN HÀNG CHỈ ÁP DỤNG 1 MÃ) */}
             <div className="bg-white dark:bg-[#12151E] p-5 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                <Ticket className="w-5 h-5 text-amber-500" />
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                  Mã Giảm Giá & Voucher Bếp Việt
-                </h3>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-amber-500" />
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                    Mã Giảm Giá & Voucher
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                  Tối đa 1 mã / đơn
+                </span>
               </div>
+
+              {/* Policy note */}
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                💡 <strong>Quy định:</strong> Mỗi đơn hàng chỉ áp dụng tối đa <strong>1 mã giảm giá</strong>. Khi chọn mã mới, hệ thống sẽ tự động cập nhật thay thế mã cũ.
+              </div>
+
+              {/* Active Applied Coupon Card */}
+              {promoCode && discount > 0 && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 flex items-center justify-between gap-3 animate-fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                      ✓
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-black text-emerald-800 dark:text-emerald-300 text-xs tracking-wider">
+                          {promoCode}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200">
+                          Đang áp dụng
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
+                        Giảm: -{formatVND(discount)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const old = promoCode;
+                      removePromo();
+                      showToast(`Đã gỡ mã giảm giá ${old}`, 'info');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-[11px] font-bold transition shrink-0 active:scale-95 shadow-sm"
+                  >
+                    Gỡ mã
+                  </button>
+                </div>
+              )}
 
               {/* Coupon input */}
               <div className="flex items-center gap-2">
@@ -785,15 +835,11 @@ export default function Checkout() {
                 </button>
               </div>
 
-              {promoMessage && (
+              {promoMessage && !promoCode && (
                 <p
-                  className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 ${
-                    discount > 0
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                  }`}
+                  className="text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
                 >
-                  {discount > 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                  <AlertCircle className="w-3.5 h-3.5" />
                   <span>{promoMessage}</span>
                 </p>
               )}
@@ -802,7 +848,7 @@ export default function Checkout() {
               {availableCoupons.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Voucher Gợi Ý Cho Bạn (Bấm để áp dụng):
+                    Voucher Có Sẵn (Bấm 1 chạm để áp dụng):
                   </p>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {availableCoupons.map((c) => (
@@ -825,8 +871,12 @@ export default function Checkout() {
                             </span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
-                          {promoCode === c.code ? 'Đã Chọn' : 'Chọn Mã'}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition ${
+                          promoCode === c.code 
+                            ? 'bg-amber-500 text-slate-950 border-amber-600 font-black' 
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                        }`}>
+                          {promoCode === c.code ? 'Đang Dùng' : 'Áp Dụng'}
                         </span>
                       </button>
                     ))}

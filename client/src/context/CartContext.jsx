@@ -158,23 +158,43 @@ export function CartProvider({ children }) {
       ? 0
       : baseShippingFee;
 
-  // Apply promo vouchers using backend validation
+  // Remove applied promo voucher
+  const removePromo = () => {
+    setPromoCode('');
+    setDiscount(0);
+    setPromoMessage('');
+  };
+
+  // Apply promo vouchers using backend validation (Strictly 1 coupon per order)
   const applyPromo = async (code) => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
-      setPromoCode('');
-      setDiscount(0);
-      setPromoMessage('');
+      removePromo();
       return { success: false, message: 'Vui lòng nhập mã giảm giá' };
     }
+
+    const previousCode = promoCode;
 
     try {
       const res = await validateCoupon(cleanCode, subtotal);
       if (res.success) {
         setPromoCode(cleanCode);
         setDiscount(res.discount_amount || 0);
-        setPromoMessage(res.message || `Đã áp dụng mã ${cleanCode}!`);
-        return { success: true, discount: res.discount_amount };
+        const replaceNote = (previousCode && previousCode !== cleanCode)
+          ? ` (thay thế mã ${previousCode})`
+          : '';
+        const msg = res.message 
+          ? `${res.message}${replaceNote}`
+          : `Đã áp dụng mã ${cleanCode}${replaceNote}! (Mỗi đơn áp dụng tối đa 1 mã)`;
+        setPromoMessage(msg);
+        return { 
+          success: true, 
+          discount: res.discount_amount, 
+          replaced: !!(previousCode && previousCode !== cleanCode),
+          previousCode,
+          code: cleanCode,
+          message: msg
+        };
       } else {
         setDiscount(0);
         setPromoMessage(res.error || 'Mã không hợp lệ');
@@ -191,22 +211,28 @@ export function CartProvider({ children }) {
         const disc = Math.min(50000, Math.round(subtotal * 0.2));
         setPromoCode('INDOMIE20');
         setDiscount(disc);
-        setPromoMessage(`Đã áp dụng giảm 20% (-${disc.toLocaleString('vi-VN')} ₫)!`);
-        return { success: true, discount: disc };
+        const replaceNote = (previousCode && previousCode !== 'INDOMIE20') ? ` (thay thế mã ${previousCode})` : '';
+        const msg = `Đã áp dụng giảm 20% (-${disc.toLocaleString('vi-VN')} ₫)${replaceNote}!`;
+        setPromoMessage(msg);
+        return { success: true, discount: disc, replaced: !!(previousCode && previousCode !== 'INDOMIE20'), code: 'INDOMIE20', message: msg };
       }
       if (cleanCode === 'HANOI15K') {
         const disc = Math.min(baseShippingFee || 15000, 15000);
         setPromoCode('HANOI15K');
         setDiscount(disc);
-        setPromoMessage(`Đã trừ ${disc.toLocaleString('vi-VN')} ₫ phí ship nội thành Hà Nội!`);
-        return { success: true, discount: disc };
+        const replaceNote = (previousCode && previousCode !== 'HANOI15K') ? ` (thay thế mã ${previousCode})` : '';
+        const msg = `Đã trừ ${disc.toLocaleString('vi-VN')} ₫ phí ship nội thành Hà Nội${replaceNote}!`;
+        setPromoMessage(msg);
+        return { success: true, discount: disc, replaced: !!(previousCode && previousCode !== 'HANOI15K'), code: 'HANOI15K', message: msg };
       }
       if (cleanCode === 'BEPVIETVIP') {
         const disc = Math.min(100000, Math.round(subtotal * 0.25));
         setPromoCode('BEPVIETVIP');
         setDiscount(disc);
-        setPromoMessage(`Đã áp dụng giảm 25% VIP (-${disc.toLocaleString('vi-VN')} ₫)!`);
-        return { success: true, discount: disc };
+        const replaceNote = (previousCode && previousCode !== 'BEPVIETVIP') ? ` (thay thế mã ${previousCode})` : '';
+        const msg = `Đã áp dụng giảm 25% VIP (-${disc.toLocaleString('vi-VN')} ₫)${replaceNote}!`;
+        setPromoMessage(msg);
+        return { success: true, discount: disc, replaced: !!(previousCode && previousCode !== 'BEPVIETVIP'), code: 'BEPVIETVIP', message: msg };
       }
 
       setDiscount(0);
@@ -239,6 +265,7 @@ export function CartProvider({ children }) {
         promoCode,
         promoMessage,
         applyPromo,
+        removePromo,
         total,
         itemCount,
         isStoreClosedModalOpen,
