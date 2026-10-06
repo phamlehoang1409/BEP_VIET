@@ -1,0 +1,21 @@
+{
+  "name": "vietfood-delivery-fullstack",
+  "version": "1.0.0",
+  "description": "Fullstack Food Ordering App with Supabase PostgreSQL, Real-time Chat, Admin Portal & PWA",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "scripts": {
+    "install:all": "cmd /c \"cd server && npm install\" && cmd /c \"cd client && npm install\"",
+    "build:client": "cd client && npm run build",
+    "build": "npm run build:client",
+    "start:server": "cd server && node index.js",
+    "start:client": "cd client && npx vite --host --port 5173",
+    "dev": "npx concurrently -k -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run start:server\" \"npm run start:client\"",
+    "commit": "git add . && git commit -m \"chore: auto commit updates\" && git push",
+    "deploy": "git add . && git commit -m \"deploy: update app\" && git push"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
