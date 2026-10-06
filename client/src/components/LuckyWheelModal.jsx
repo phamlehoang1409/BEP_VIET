@@ -25,15 +25,19 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
   const [copied, setCopied] = useState(false);
   const [globalStats, setGlobalStats] = useState(null);
 
-  // Sync available spins from localStorage whenever modal opens
+  // Sync available spins from localStorage whenever modal opens or receives update
   useEffect(() => {
-    if (isOpen) {
+    const syncSpins = () => {
       try {
         const saved = parseInt(localStorage.getItem('bepviet_user_spins') || '0', 10);
         setUserSpins(isNaN(saved) ? 0 : saved);
       } catch (e) {
         setUserSpins(0);
       }
+    };
+
+    if (isOpen) {
+      syncSpins();
       setResult(null);
       setCopied(false);
 
@@ -43,6 +47,9 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
         })
         .catch(() => {});
     }
+
+    window.addEventListener('bepviet_spins_updated', syncSpins);
+    return () => window.removeEventListener('bepviet_spins_updated', syncSpins);
   }, [isOpen]);
 
   if (!isOpen) return null;

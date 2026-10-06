@@ -8,7 +8,8 @@ import { CartProvider, useCart } from './context/CartContext';
 import { ChatProvider } from './context/ChatContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { LoyaltyProvider, useLoyalty } from './context/LoyaltyContext';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
+import { awardSpinForCompletedOrder } from './utils/luckyWheelService';
 
 // Customer Components
 import Navbar from './components/Navbar';
@@ -89,6 +90,7 @@ class ErrorBoundary extends React.Component {
 function CustomerLayout() {
   const { storeSettings } = useCart();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [isWheelOpen, setIsWheelOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [availableFoods, setAvailableFoods] = useState([]);
@@ -101,7 +103,7 @@ function CustomerLayout() {
       .catch(() => {});
   }, []);
 
-  // Web Notification Socket Listener for Delivery Updates
+  // Web Notification Socket Listener for Delivery Updates & Spin Award on Completion
   useEffect(() => {
     const socket = getSocket();
     const handleStatusUpdate = (updatedOrder) => {
@@ -111,6 +113,14 @@ function CustomerLayout() {
           updatedOrder.status,
           updatedOrder.customer_name || user?.name || 'Bạn'
         );
+
+        // Award Lucky Wheel spin ONLY when order reaches 'completed'
+        if (updatedOrder.status === 'completed') {
+          const awarded = awardSpinForCompletedOrder(updatedOrder);
+          if (awarded) {
+            showToast(`🎁 Đơn hàng #${updatedOrder.order_code} đã giao hoàn thành! Bạn nhận được +1 lượt quay Vòng Quay May Mắn!`, 'success', 8000);
+          }
+        }
       }
     };
 

@@ -226,13 +226,8 @@ export default function Checkout() {
           usePoints(pointsDiscountAmount);
         }
         clearCart();
-        // Award +1 spin turn for future purchase!
-        try {
-          const currentSpins = parseInt(localStorage.getItem('bepviet_user_spins') || '0', 10);
-          localStorage.setItem('bepviet_user_spins', (currentSpins + 1).toString());
-        } catch (e) {}
 
-        showToast('Đã gửi đơn hàng tới Bếp Việt! Bạn nhận được +1 lượt quay may mắn 🎁', 'success', 6000);
+        showToast('🎉 Đặt hàng thành công! Quán đang bắt đầu xử lý đơn của bạn.', 'success', 5000);
         navigate(`/order-success/${res.order.id}`, { state: { order: res.order } });
       }
     } catch (err) {

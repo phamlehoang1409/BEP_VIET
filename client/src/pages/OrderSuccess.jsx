@@ -30,6 +30,7 @@ import { useLoyalty } from '../context/LoyaltyContext';
 import ConfirmModal from '../components/ConfirmModal';
 import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
 import { notificationService } from '../utils/notificationService';
+import { awardSpinForCompletedOrder } from '../utils/luckyWheelService';
 
 export default function OrderSuccess() {
   const { id } = useParams();
@@ -151,7 +152,7 @@ export default function OrderSuccess() {
     };
   }, [order?.id, order?.order_code, id]);
 
-  // Trigger celebration confetti ONLY when order is confirmed or progressed past pending
+  // Trigger celebration confetti & spin award when order completes or confirms
   useEffect(() => {
     if (order && order.status !== 'pending' && order.status !== 'cancelled' && !hasTriggeredConfetti) {
       setHasTriggeredConfetti(true);
@@ -160,6 +161,13 @@ export default function OrderSuccess() {
         spread: 80,
         origin: { y: 0.6 }
       });
+    }
+
+    if (order && order.status === 'completed') {
+      const awarded = awardSpinForCompletedOrder(order);
+      if (awarded) {
+        showToast('🎁 Chúc mừng! Bạn nhận được +1 lượt quay Vòng Quay May Mắn khi đơn hàng hoàn thành!', 'success', 8000);
+      }
     }
   }, [order?.status, hasTriggeredConfetti]);
 
@@ -277,26 +285,47 @@ export default function OrderSuccess() {
           />
         )}
 
-      {/* LUCKY SPIN REWARD BANNER (Only show when NOT cancelled) */}
+      {/* LUCKY SPIN REWARD BANNER (Awarded only when status === 'completed') */}
       {!isCancelled && order?.status !== 'cancelled' && (
-        <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-rose-500/15 border border-amber-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-3 text-center sm:text-left">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg shadow-orange-500/25 shrink-0">
-              🎁
-            </div>
-            <div>
-              <div className="inline-flex items-center gap-1 text-[11px] font-black uppercase text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full mb-0.5">
-                <span>Đặc Quyền Khách Hàng</span>
+        order?.status === 'completed' ? (
+          <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-rose-500/20 border-2 border-amber-500/40 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md text-white">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg shadow-orange-500/30 shrink-0 animate-bounce">
+                🎁
               </div>
-              <h4 className="font-black text-slate-900 text-sm sm:text-base">
-                Bạn Vừa Được Tặng +1 Lượt Quay May Mắn!
-              </h4>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Áp dụng cho đơn hàng <strong>#{order?.order_code}</strong>. Hãy bấm nút <strong>"Vòng Quay May Mắn"</strong> ở góc dưới màn hình để quay voucher giảm giá cho lần đặt món tiếp theo nhé!
-              </p>
+              <div>
+                <div className="inline-flex items-center gap-1 text-[11px] font-black uppercase text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-full mb-0.5 border border-amber-500/30">
+                  <span>Đã Nhận Thưởng</span>
+                </div>
+                <h4 className="font-black text-white text-sm sm:text-base">
+                  Bạn Đã Nhận Được +1 Lượt Quay May Mắn!
+                </h4>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Đơn hàng <strong>#{order?.order_code}</strong> đã giao thành công. Hãy bấm nút <strong>"Vòng Quay May Mắn"</strong> ở góc màn hình để quay thưởng voucher giảm giá nhé!
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm text-white">
+            <div className="flex items-center gap-3 text-center sm:text-left">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xl shrink-0 border border-amber-500/30">
+                🎁
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full mb-0.5">
+                  <span>Quà Tặng Khi Hoàn Thành</span>
+                </div>
+                <h4 className="font-bold text-white text-xs sm:text-sm">
+                  Tặng +1 Lượt Quay May Mắn Khi Đơn Giao Thành Công
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Sau khi tài xế giao món đến bạn và đơn chuyển sang trạng thái <strong>Hoàn thành</strong>, hệ thống sẽ tự động cộng 1 vé quay trúng voucher giảm giá cho bạn.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
       )}
 
       {/* WEB PUSH NOTIFICATION ALERT CARD (When not granted) */}

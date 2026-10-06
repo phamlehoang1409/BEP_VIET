@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { formatVND } from '../utils/vietnamData';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
+import { awardSpinForCompletedOrder } from '../utils/luckyWheelService';
 
 export default function MyOrders() {
   const { user, setIsAuthModalOpen } = useAuth();
@@ -40,7 +41,15 @@ export default function MyOrders() {
     setLoading(true);
     try {
       const res = await getCustomerOrders(phone);
-      if (res.success) setOrders(res.orders || []);
+      if (res.success && res.orders) {
+        setOrders(res.orders);
+        // Award spin for any completed order that hasn't been awarded yet
+        res.orders.forEach((o) => {
+          if (o.status === 'completed') {
+            awardSpinForCompletedOrder(o);
+          }
+        });
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -270,6 +279,11 @@ export default function MyOrders() {
                   <span className="text-base font-black text-orange-600">
                     {formatVND(order.total_amount)}
                   </span>
+                  {order.status === 'completed' && (
+                    <span className="flex items-center gap-1 text-[10px] font-extrabold text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md mt-0.5">
+                      🎁 +1 Lượt quay may mắn
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
