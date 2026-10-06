@@ -16,7 +16,11 @@ import {
   Copy,
   CheckCircle2,
   Award,
-  Utensils
+  Utensils,
+  Crown,
+  Zap,
+  TrendingUp,
+  Check
 } from 'lucide-react';
 import { getFoods, getCategories, getReviews } from '../api';
 import FoodCard from '../components/FoodCard';
@@ -138,27 +142,117 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Hero Image Showcase */}
-          <div className="lg:col-span-5 relative flex justify-center">
-            <div className="relative w-72 sm:w-88 md:w-96 aspect-square">
-              <div className="absolute inset-0 rounded-full bg-amber-500/20 blur-2xl animate-pulse" />
-              <img
-                src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80"
-                alt="Mì Indomie Thượng Hạng"
-                className="w-full h-full object-cover rounded-full border-4 border-amber-400/40 shadow-2xl relative z-10"
-              />
-              {/* Floating review card */}
-              <div className="absolute -bottom-2 -left-4 sm:bottom-4 sm:left-0 z-20 bg-[#161922]/95 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl shadow-2xl text-white border border-amber-500/30 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-lg">
-                  🍜
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {'★★★★★'}
-                    <span className="text-xs font-bold text-slate-300 ml-1">4.9/5</span>
+          {/* VIP LUXURY SHOWCASE CARDS HUB (NO IMAGE, PURE LUXURY INTERACTIVE CARDS) */}
+          <div className="lg:col-span-5 relative">
+            {/* Background Glow */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-amber-500/20 via-orange-500/10 to-rose-500/15 blur-2xl pointer-events-none" />
+
+            {/* Main Luxury Glass Terminal Card */}
+            <div className="relative z-10 rounded-3xl bg-[#12151E]/95 backdrop-blur-xl border-2 border-amber-500/30 p-5 sm:p-6 shadow-[0_10px_40px_rgba(0,0,0,0.6)] space-y-4">
+              {/* Header Badge */}
+              <div className="flex items-center justify-between pb-3 border-b border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-orange-500 text-slate-950 flex items-center justify-center font-black shadow-md">
+                    <Crown className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-black text-amber-300">10.000+ Đĩa Indomie Phục Vụ</p>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-300">
+                      Bếp Việt Signature
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      Tiêu Chuẩn Hương Vị 5 Sao
+                    </p>
+                  </div>
                 </div>
+
+                <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full text-[11px] font-black text-amber-300">
+                  <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                  <span>4.9 / 5.0</span>
+                </div>
+              </div>
+
+              {/* 3 Signature Highlights */}
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🥩</span>
+                    <div>
+                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
+                        Mì Indomie Bò Trứng Lòng Đào
+                      </h5>
+                      <p className="text-[10px] text-slate-400">
+                        Bò Mỹ mềm thơm, sốt cay ngọt, bắp ngọt giòn
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs sm:text-sm font-black text-amber-400">55.000₫</div>
+                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Hot #1</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🥓</span>
+                    <div>
+                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
+                        Mì Indomie Xá Xíu Quay Mật Ong
+                      </h5>
+                      <p className="text-[10px] text-slate-400">
+                        Xém cạnh giòn bì, lạp xưởng trứng cút béo ngậy
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs sm:text-sm font-black text-amber-400">52.000₫</div>
+                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Signature</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🦐</span>
+                    <div>
+                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
+                        Mì Indomie Hải Sản Sa Tế
+                      </h5>
+                      <p className="text-[10px] text-slate-400">
+                        Tôm tươi bóc vỏ, sốt sa tế cay nồng đậm đà
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-xs sm:text-sm font-black text-amber-400">59.000₫</div>
+                    <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">Cay Nồng</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* VIP Live Badge & Quick Link */}
+              <div className="pt-2 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-[11px]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Đang phục vụ nóng hổi</span>
+                </div>
+
+                <Link
+                  to="/menu"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-black text-xs border border-amber-500/40 transition active:scale-95"
+                >
+                  <span>Xem Toàn Bộ Món</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Floating Live Notification Badge */}
+            <div className="hidden sm:flex absolute -bottom-4 -left-4 z-20 bg-[#161922]/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl text-white border border-amber-500/40 items-center gap-2.5 animate-bounce">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                🛵
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] text-slate-400 font-medium">Vừa hoàn tất giao đơn:</p>
+                <p className="text-xs font-black text-amber-300">#HN-8842 Cầu Giấy (1p trước)</p>
               </div>
             </div>
           </div>
