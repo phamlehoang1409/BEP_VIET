@@ -45,5 +45,12 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
     fs.writeFileSync(path.join(distDir, `${route}.html`), indexHtml);
   }
 
-  console.log('✅ Generated static entrypoint files for all routes:', routes);
+  // Pre-generate numeric order-success subpaths for zero-404 F5 reloads
+  for (let i = 1; i <= 200; i++) {
+    const idDir = path.join(distDir, 'order-success', String(i));
+    fs.mkdirSync(idDir, { recursive: true });
+    fs.writeFileSync(path.join(idDir, 'index.html'), indexHtml);
+  }
+
+  console.log('✅ Generated static entrypoint files for all routes and order-success subpaths (1..200)');
 }
