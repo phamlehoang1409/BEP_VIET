@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Sparkles,
   Tag,
-  Check
+  Check,
+  Clock
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -108,7 +109,7 @@ export default function Checkout() {
       // Check if user won a voucher from Lucky Wheel
       try {
         const luckyCode = localStorage.getItem('bepviet_lucky_voucher');
-        if (luckyCode && !appliedPromo) {
+        if (luckyCode && !promoCode) {
           setInputCoupon(luckyCode);
         }
       } catch (e) {}
