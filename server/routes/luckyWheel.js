@@ -4,13 +4,13 @@ const supabase = require('../db/supabase');
 
 const LUCKY_ROW_PHONE = 'STORE_LUCKY_WHEEL';
 
-// Winning prize pool (awarded every 10 spins)
+// Winning prize pool (awarded prizes: 5k, 7k, 10%)
 const WINNING_PRIZES = [
-  { id: 1, label: 'Giảm 10.000₫', code: 'MAYMAN10K', sliceIndex: 1 },
-  { id: 2, label: 'Freeship 15k', code: 'FREESHIP15K', sliceIndex: 2 },
-  { id: 3, label: 'Giảm 20% Đơn', code: 'INDOMIE20', sliceIndex: 3 },
-  { id: 4, label: 'Voucher 10k', code: 'MAYMAN10K', sliceIndex: 4 },
-  { id: 5, label: 'VIP Giảm 25%', code: 'BEPVIETVIP', sliceIndex: 5 },
+  { id: 1, label: 'Giảm 5.000₫', code: 'MAYMAN5K', sliceIndex: 1 },
+  { id: 2, label: 'Giảm 7.000₫', code: 'MAYMAN7K', sliceIndex: 2 },
+  { id: 3, label: 'Giảm 10%', code: 'MAYMAN10PT', sliceIndex: 3 },
+  { id: 4, label: 'Giảm 5.000₫', code: 'MAYMAN5K', sliceIndex: 4 },
+  { id: 5, label: 'Giảm 7.000₫', code: 'MAYMAN7K', sliceIndex: 5 },
 ];
 
 const DEFAULT_LOSS_PRIZE = {

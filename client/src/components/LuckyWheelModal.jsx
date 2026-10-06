@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { Gift, X, Sparkles, Trophy, Check, ArrowRight, ShoppingBag, AlertCircle } from 'lucide-react';
+import { Gift, X, Sparkles, Trophy, Check, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useToast } from './Toast';
 import { spinLuckyWheel, getLuckyWheelStatus } from '../api';
 
 const WHEEL_SLICES = [
   { id: 0, label: 'May Mắn Lần Sau', code: null, color: '#475569', text: '#ffffff' },
-  { id: 1, label: 'Giảm 10.000₫', code: 'MAYMAN10K', color: '#F59E0B', text: '#ffffff' },
-  { id: 2, label: 'Freeship 15k', code: 'FREESHIP15K', color: '#10B981', text: '#ffffff' },
-  { id: 3, label: 'Giảm 20% Đơn', code: 'INDOMIE20', color: '#EF4444', text: '#ffffff' },
-  { id: 4, label: 'Voucher 10k', code: 'MAYMAN10K', color: '#6366F1', text: '#ffffff' },
-  { id: 5, label: 'VIP Giảm 25%', code: 'BEPVIETVIP', color: '#EC4899', text: '#ffffff' },
+  { id: 1, label: 'Giảm 5.000₫', code: 'MAYMAN5K', color: '#F59E0B', text: '#ffffff' },
+  { id: 2, label: 'Giảm 7.000₫', code: 'MAYMAN7K', color: '#10B981', text: '#ffffff' },
+  { id: 3, label: 'Giảm 10%', code: 'MAYMAN10PT', color: '#EF4444', text: '#ffffff' },
+  { id: 4, label: 'Giảm 5.000₫', code: 'MAYMAN5K', color: '#6366F1', text: '#ffffff' },
+  { id: 5, label: 'Giảm 7.000₫', code: 'MAYMAN7K', color: '#EC4899', text: '#ffffff' },
 ];
 
 export default function LuckyWheelModal({ isOpen, onClose }) {
@@ -67,7 +67,6 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
     } catch (e) {}
 
     try {
-      // Call server rule: 9 spins "Chúc bạn may mắn lần sau", 10th spin of all users wins!
       const spinRes = await spinLuckyWheel();
       const prize = spinRes.prize || {
         id: 0,
@@ -149,7 +148,7 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
           </div>
           <h3 className="text-xl font-black text-white">Vòng Quay May Mắn</h3>
           <p className="text-[11px] text-slate-300 mt-0.5">
-            Quy luật: Cứ sau 10 lượt quay của 10 người sẽ có 1 người trúng thưởng voucher lớn!
+            Quay liền tay - Nhận ngay voucher giảm giá hấp dẫn!
           </p>
         </div>
 
@@ -197,7 +196,7 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
                 const textY = 50 + 32 * Math.sin((Math.PI * textAngle) / 180);
 
                 return (
-                  <g key={slice.id}>
+                  <g key={slice.id + '-' + idx}>
                     <path d={d} fill={slice.color} stroke="#0f172a" strokeWidth="0.6" />
                     <text
                       x={textX}
@@ -264,7 +263,7 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
                   🍀 Chúc bạn may mắn lần sau!
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Cứ sau 10 lượt quay sẽ có 1 người may mắn trúng voucher lớn. Hãy đặt món để nhận thêm lượt quay nhé!
+                  Hãy tiếp tục đặt món tại Bếp Việt để nhận thêm lượt quay may mắn nhé!
                 </p>
               </div>
             )}

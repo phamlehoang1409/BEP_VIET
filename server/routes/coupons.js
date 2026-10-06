@@ -36,23 +36,33 @@ const DEFAULT_COUPONS = [
     is_active: true
   },
   {
-    code: 'MAYMAN10K',
+    code: 'MAYMAN5K',
     discount_type: 'fixed',
-    discount_value: 10000,
-    min_order: 50000,
-    max_discount: 10000,
+    discount_value: 5000,
+    min_order: 30000,
+    max_discount: 5000,
     expiry_date: '2027-12-31',
-    description: 'Voucher May Mắn: Giảm 10.000₫ cho đơn từ 50.000₫',
+    description: 'Voucher Vòng Quay: Giảm 5.000₫ cho đơn từ 30.000₫',
     is_active: true
   },
   {
-    code: 'FREESHIP15K',
+    code: 'MAYMAN7K',
     discount_type: 'fixed',
-    discount_value: 15000,
-    min_order: 60000,
-    max_discount: 15000,
+    discount_value: 7000,
+    min_order: 30000,
+    max_discount: 7000,
     expiry_date: '2027-12-31',
-    description: 'Voucher May Mắn: Miễn phí vận chuyển 15.000₫ cho đơn từ 60.000₫',
+    description: 'Voucher Vòng Quay: Giảm 7.000₫ cho đơn từ 30.000₫',
+    is_active: true
+  },
+  {
+    code: 'MAYMAN10PT',
+    discount_type: 'percent',
+    discount_value: 10,
+    min_order: 30000,
+    max_discount: 25000,
+    expiry_date: '2027-12-31',
+    description: 'Voucher Vòng Quay: Giảm 10% cho đơn từ 30.000₫',
     is_active: true
   }
 ];
