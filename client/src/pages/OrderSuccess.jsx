@@ -29,7 +29,6 @@ import { useCart } from '../context/CartContext';
 import { useLoyalty } from '../context/LoyaltyContext';
 import ConfirmModal from '../components/ConfirmModal';
 import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
-import LiveDriverMap from '../components/LiveDriverMap';
 import { notificationService } from '../utils/notificationService';
 
 export default function OrderSuccess() {
@@ -324,11 +323,6 @@ export default function OrderSuccess() {
             <span>Bật Thông Báo Ngay</span>
           </button>
         </div>
-      )}
-
-      {/* FEATURE 4: LIVE GPS DRIVER TRACKING MAP */}
-      {!isCancelled && order?.status !== 'cancelled' && (
-        <LiveDriverMap order={order} />
       )}
 
       {/* FEATURE 3: VIP POINTS CASHBACK EARNED CARD */}
