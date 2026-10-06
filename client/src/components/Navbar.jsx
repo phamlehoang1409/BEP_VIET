@@ -4,6 +4,7 @@ import { ShoppingBag, User, UtensilsCrossed, Shield, Search, PhoneCall, LogOut, 
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLoyalty } from '../context/LoyaltyContext';
 import { formatVND } from '../utils/vietnamData';
 import { getStoreSettings } from '../api';
 
@@ -13,6 +14,7 @@ export default function Navbar({ onOpenAI }) {
   const { itemCount, subtotal, setIsCartOpen, storeSettings, showStoreClosedModal } = useCart();
   const { user, logout, setIsAuthModalOpen, isAdmin } = useAuth();
   const { theme, toggleTheme, isDarkMode } = useTheme();
+  const { points: userPoints, currentTier } = useLoyalty();
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdown, setUserDropdown] = useState(false);
 
@@ -227,16 +229,29 @@ export default function Navbar({ onOpenAI }) {
                     <p className="text-xs font-black text-amber-300 leading-tight truncate max-w-[100px]">
                       {user.name || 'Khách hàng'}
                     </p>
-                    <p className="text-[10px] text-slate-400">{user.phone}</p>
+                    <p className="text-[10px] text-purple-300 font-bold flex items-center gap-0.5">
+                      <span>{currentTier.icon}</span>
+                      <span>{userPoints.toLocaleString()} đ</span>
+                    </p>
                   </div>
                 </button>
 
                 {userDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-[#161922] rounded-2xl shadow-2xl border border-amber-500/30 py-2 z-50 animate-scale-up text-white">
-                    <div className="px-4 py-2 border-b border-slate-800">
-                      <p className="text-xs text-slate-400">Đăng nhập tài khoản</p>
-                      <p className="text-sm font-bold text-amber-300">{user.name}</p>
+                  <div className="absolute right-0 mt-2 w-60 bg-[#161922] rounded-2xl shadow-2xl border border-amber-500/30 py-2 z-50 animate-scale-up text-white">
+                    <div className="px-4 py-3 border-b border-slate-800 bg-purple-950/20">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-slate-400">Tài khoản khách hàng</p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                          {currentTier.icon} {currentTier.name}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-amber-300 mt-1">{user.name}</p>
                       <p className="text-xs text-slate-400 font-mono">{user.phone}</p>
+                      
+                      <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Điểm tích lũy:</span>
+                        <span className="font-black text-amber-400">{userPoints.toLocaleString()} điểm</span>
+                      </div>
                     </div>
                     <Link
                       to="/orders"

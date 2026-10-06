@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { ChatProvider } from './context/ChatContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { LoyaltyProvider, useLoyalty } from './context/LoyaltyContext';
 import { ToastProvider } from './components/Toast';
 
 // Customer Components
@@ -177,61 +178,63 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <CartProvider>
-            <ToastProvider>
-              <div
-                onContextMenu={(e) => {
-                  try {
-                    const isAdmin = Boolean(
-                      localStorage.getItem('bepviet_admin_token') ||
-                      localStorage.getItem('bepviet_is_admin') === 'true' ||
-                      window.location.search.includes('dev=1') ||
-                      window.location.pathname.startsWith('/admin') ||
-                      window.location.pathname.includes('chu-quan')
-                    );
-                    if (isAdmin) return true;
-                  } catch (err) {}
-                  e.preventDefault();
-                  e.stopPropagation();
-                  return false;
-                }}
-                className="min-h-screen bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
-              >
-                <BrowserRouter>
-                  <Routes>
-                    {/* Customer Storefront Routes */}
-                    <Route element={<CustomerLayout />}>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/menu" element={<Menu />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/order-success/:id" element={<OrderSuccess />} />
-                      <Route path="/orders" element={<MyOrders />} />
-                    </Route>
+          <LoyaltyProvider>
+            <CartProvider>
+              <ToastProvider>
+                <div
+                  onContextMenu={(e) => {
+                    try {
+                      const isAdmin = Boolean(
+                        localStorage.getItem('bepviet_admin_token') ||
+                        localStorage.getItem('bepviet_is_admin') === 'true' ||
+                        window.location.search.includes('dev=1') ||
+                        window.location.pathname.startsWith('/admin') ||
+                        window.location.pathname.includes('chu-quan')
+                      );
+                      if (isAdmin) return true;
+                    } catch (err) {}
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                  }}
+                  className="min-h-screen bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
+                >
+                  <BrowserRouter>
+                    <Routes>
+                      {/* Customer Storefront Routes */}
+                      <Route element={<CustomerLayout />}>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/menu" element={<Menu />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/order-success/:id" element={<OrderSuccess />} />
+                        <Route path="/orders" element={<MyOrders />} />
+                      </Route>
 
-                    {/* Block /admin/login */}
-                    <Route path="/admin/login" element={<Navigate to="/" replace />} />
+                      {/* Block /admin/login */}
+                      <Route path="/admin/login" element={<Navigate to="/" replace />} />
 
-                    {/* Secret Merchant Admin Portals */}
-                    <Route path="/chu-quan-1409" element={<AdminLogin />} />
-                    <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
+                      {/* Secret Merchant Admin Portals */}
+                      <Route path="/chu-quan-1409" element={<AdminLogin />} />
+                      <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
 
-                    {/* Merchant Admin Routes */}
-                    <Route path="/admin" element={<AdminLayout />}>
-                      <Route index element={<Dashboard />} />
-                      <Route path="foods" element={<FoodManagement />} />
-                      <Route path="orders" element={<OrderManagement />} />
-                      <Route path="coupons" element={<CouponManagement />} />
-                      <Route path="reviews" element={<ReviewManagement />} />
-                      <Route path="chat" element={<AdminChat />} />
-                    </Route>
+                      {/* Merchant Admin Routes */}
+                      <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<Dashboard />} />
+                        <Route path="foods" element={<FoodManagement />} />
+                        <Route path="orders" element={<OrderManagement />} />
+                        <Route path="coupons" element={<CouponManagement />} />
+                        <Route path="reviews" element={<ReviewManagement />} />
+                        <Route path="chat" element={<AdminChat />} />
+                      </Route>
 
-                    {/* Fallback */}
-                    <Route path="*" element={<Home />} />
-                  </Routes>
-                </BrowserRouter>
-              </div>
-            </ToastProvider>
-          </CartProvider>
+                      {/* Fallback */}
+                      <Route path="*" element={<Home />} />
+                    </Routes>
+                  </BrowserRouter>
+                </div>
+              </ToastProvider>
+            </CartProvider>
+          </LoyaltyProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

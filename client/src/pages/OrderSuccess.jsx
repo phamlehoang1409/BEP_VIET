@@ -26,8 +26,10 @@ import { useChat } from '../context/ChatContext';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useLoyalty } from '../context/LoyaltyContext';
 import ConfirmModal from '../components/ConfirmModal';
 import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
+import LiveDriverMap from '../components/LiveDriverMap';
 import { notificationService } from '../utils/notificationService';
 
 export default function OrderSuccess() {
@@ -314,7 +316,33 @@ export default function OrderSuccess() {
           </button>
         </div>
       )}
-      <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+
+      {/* FEATURE 4: LIVE GPS DRIVER TRACKING MAP */}
+      {!isCancelled && order?.status !== 'cancelled' && (
+        <LiveDriverMap order={order} />
+      )}
+
+      {/* FEATURE 3: VIP POINTS CASHBACK EARNED CARD */}
+      {!isCancelled && order?.status !== 'cancelled' && order?.total_amount && (
+        <div className="bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-900/30 border border-purple-500/30 rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-4 text-white shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{currentTier?.icon || '💎'}</span>
+            <div>
+              <h4 className="font-extrabold text-sm text-purple-200 flex items-center gap-2">
+                <span>Tích Điểm VIP ({currentTier?.name || 'Thành Viên Bếp Việt'})</span>
+                <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
+                  +{(currentTier?.earnRate || 0.05) * 100}% hoàn điểm
+                </span>
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Đơn hàng hoàn tất sẽ cộng thêm <strong className="text-amber-400">+{Math.round((order?.total_amount || 0) * (currentTier?.earnRate || 0.05)).toLocaleString()} điểm</strong> vào ví của bạn để đổi đồ ăn miễn phí!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-[#12151E] p-5 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 text-slate-900 dark:text-slate-100">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">

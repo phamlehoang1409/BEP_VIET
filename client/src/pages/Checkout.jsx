@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useLoyalty } from '../context/LoyaltyContext';
 import { useToast } from '../components/Toast';
 import {
   formatVND,
@@ -46,6 +47,7 @@ export default function Checkout() {
     showStoreClosedModal
   } = useCart();
   const { user } = useAuth();
+  const { points: userPoints, currentTier, usePoints } = useLoyalty();
   const { showToast } = useToast();
 
   const [customerName, setCustomerName] = useState(user?.name || '');
@@ -55,6 +57,18 @@ export default function Checkout() {
   const [ward, setWard] = useState(user?.ward || 'Phường Hàng Bạc');
   const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('COD');
+
+  // Feature 2: Delivery Timing
+  const [deliveryType, setDeliveryType] = useState('instant'); // 'instant' | 'scheduled'
+  const [scheduledTime, setScheduledTime] = useState('11:30 - 12:00');
+
+  // Feature 5: Tip for Driver
+  const [driverTip, setDriverTip] = useState(0);
+
+  // Feature 3: Redeem Points
+  const [usePointsDiscount, setUsePointsDiscount] = useState(false);
+  const maxRedeemablePoints = Math.min(userPoints, Math.floor(subtotal * 0.5)); // up to 50% order
+  const pointsDiscountAmount = usePointsDiscount ? maxRedeemablePoints : 0;
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -175,6 +189,14 @@ export default function Checkout() {
     try {
       const fullDeliveryAddress = `${streetAddress.trim()}, ${ward}, ${district}, Hà Nội`;
       const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullDeliveryAddress)}`;
+      
+      const combinedNote = [
+        deliveryType === 'scheduled' ? `[⏰ HẸN GIỜ: ${scheduledTime}]` : '[⚡ GIAO HỎA TỐC 20-30P]',
+        driverTip > 0 ? `[🛵 Tip Shipper: ${formatVND(driverTip)}]` : '',
+        pointsDiscountAmount > 0 ? `[💎 Trừ điểm VIP: -${formatVND(pointsDiscountAmount)}]` : '',
+        note ? note.trim() : ''
+      ].filter(Boolean).join(' | ');
+
       const orderPayload = {
         customer_name: customerName.trim(),
         customer_phone: phoneVal.normalized,
@@ -183,10 +205,13 @@ export default function Checkout() {
         province: 'Hà Nội',
         district,
         ward,
-        note,
+        note: combinedNote,
         payment_method: paymentMethod,
-        discount,
+        discount: discount + pointsDiscountAmount,
         delivery_fee: deliveryFee,
+        driver_tip: driverTip,
+        delivery_type: deliveryType,
+        scheduled_time: deliveryType === 'scheduled' ? scheduledTime : null,
         coupon_code: promoCode || null,
         items: cartItems.map((item) => ({
           food_id: item.food.id,
@@ -196,6 +221,9 @@ export default function Checkout() {
 
       const res = await placeOrder(orderPayload);
       if (res.success && res.order) {
+        if (pointsDiscountAmount > 0) {
+          usePoints(pointsDiscountAmount);
+        }
         clearCart();
         // Award +1 spin turn for future purchase!
         try {
@@ -453,18 +481,173 @@ export default function Checkout() {
                 )}
               </div>
 
-              {/* Note */}
+              {/* Quick Packaging Chips */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
-                  Ghi Chú Cho Quán & Shipper (Tùy chọn)
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  Ghi Chú Đóng Gói Nhanh (1 Chạm):
                 </label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    'Tách riêng nước sốt/nước dùng',
+                    'Đóng hộp 2 lớp giữ nhiệt nóng',
+                    'Treo cổng bấm chuông không gọi',
+                    'Giao sảnh lễ tân/bảo vệ',
+                    'Không ớt / ít cay'
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => {
+                        if (note.includes(chip)) return;
+                        setNote(prev => (prev ? `${prev}, ${chip}` : chip));
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-300 text-[11px] font-semibold border border-slate-200 dark:border-slate-700 transition"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   placeholder="VD: Nhiều sốt sa tế, trứng lòng đào, để trước sảnh bảo vệ..."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm outline-none focus:bg-white focus:border-amber-500 transition"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#151926] border border-slate-200 dark:border-slate-700 text-sm outline-none focus:bg-white dark:focus:bg-[#1a1f30] focus:border-amber-500 transition text-slate-900 dark:text-white"
                 />
+              </div>
+            </div>
+
+            {/* Feature 2: Delivery Timing (Hẹn Giờ / Hỏa Tốc) */}
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-500 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    3. Thời Gian Nhận Món
+                  </h3>
+                  <p className="text-xs text-slate-400">Chọn giao hỏa tốc hoặc hẹn giờ nhận món trước</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Instant delivery */}
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType('instant')}
+                  className={`p-4 rounded-2xl border-2 text-left transition flex items-start justify-between ${
+                    deliveryType === 'instant'
+                      ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#151926] text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div>
+                    <div className="font-black text-sm flex items-center gap-1.5">
+                      <span>⚡ Giao Ngay Hỏa Tốc</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                      Bếp chế biến & giao tận cửa trong <strong>20 - 30 phút</strong>
+                    </p>
+                  </div>
+                  {deliveryType === 'instant' && <Check className="w-5 h-5 text-amber-500 shrink-0" />}
+                </button>
+
+                {/* Scheduled delivery */}
+                <button
+                  type="button"
+                  onClick={() => setDeliveryType('scheduled')}
+                  className={`p-4 rounded-2xl border-2 text-left transition flex items-start justify-between ${
+                    deliveryType === 'scheduled'
+                      ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#151926] text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div>
+                    <div className="font-black text-sm flex items-center gap-1.5">
+                      <span>⏰ Hẹn Giờ Giao Món</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                      Đặt trước cho bữa trưa / bữa tối chuẩn giờ
+                    </p>
+                  </div>
+                  {deliveryType === 'scheduled' && <Check className="w-5 h-5 text-amber-500 shrink-0" />}
+                </button>
+              </div>
+
+              {/* Time Slots selector if scheduled */}
+              {deliveryType === 'scheduled' && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2.5 animate-fade-in">
+                  <label className="block text-xs font-black text-amber-400 uppercase tracking-wider">
+                    Chọn Khung Giờ Giao Hôm Nay:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      '11:30 - 12:00',
+                      '12:00 - 12:30',
+                      '18:00 - 18:30',
+                      '19:00 - 19:30',
+                      '20:30 - 21:00',
+                      '21:30 - 22:00'
+                    ].map(slot => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setScheduledTime(slot)}
+                        className={`py-2 px-3 rounded-xl font-bold text-xs transition border ${
+                          scheduledTime === slot
+                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
+                            : 'bg-slate-900/60 text-slate-300 border-slate-700 hover:border-amber-400/50'
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Feature 5: Tip for Driver */}
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🛵</span>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900 dark:text-white">
+                      Tip Cho Bác Tài Giao Hỏa Tốc
+                    </h4>
+                    <p className="text-[11px] text-slate-400">Động viên bác tài vượt mưa gió giao nóng hổi ❤️</p>
+                  </div>
+                </div>
+                {driverTip > 0 && (
+                  <span className="text-xs font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                    +{formatVND(driverTip)}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-5 gap-2">
+                {[
+                  { label: '0đ', val: 0 },
+                  { label: '5k', val: 5000 },
+                  { label: '10k', val: 10000 },
+                  { label: '20k', val: 20000 },
+                  { label: '50k', val: 50000 }
+                ].map(item => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => setDriverTip(item.val)}
+                    className={`py-2.5 rounded-xl font-bold text-xs transition border ${
+                      driverTip === item.val
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md font-black'
+                        : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -656,10 +839,56 @@ export default function Checkout() {
               )}
             </div>
 
+            {/* LOYALTY POINTS BOX */}
+            {userPoints > 0 && (
+              <div className="bg-white dark:bg-[#12151E] p-4 sm:p-5 rounded-3xl border border-purple-500/30 shadow-sm space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{currentTier.icon}</span>
+                    <div>
+                      <h4 className="font-extrabold text-xs text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                        <span>Điểm Thưởng VIP</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-mono font-bold">
+                          {currentTier.name}
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Khả dụng: <strong className="text-purple-600 dark:text-purple-400 font-black">{userPoints.toLocaleString()} điểm</strong> ({formatVND(userPoints)})
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={usePointsDiscount}
+                      onChange={(e) => setUsePointsDiscount(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                </div>
+                {usePointsDiscount && (
+                  <div className="text-[11px] text-purple-800 dark:text-purple-300 font-bold bg-purple-50 dark:bg-purple-950/50 p-2.5 rounded-xl border border-purple-200 dark:border-purple-800 flex items-center justify-between">
+                    <span>Trừ điểm VIP (1đ = 1.000đ):</span>
+                    <span className="font-black text-purple-600 dark:text-purple-400">-{formatVND(pointsDiscountAmount)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* SUMMARY & SUBMIT */}
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-5">
-              <h3 className="font-extrabold text-base text-slate-900 pb-3 border-b border-slate-100">
-                Tóm Tắt Đơn Hàng ({cartItems.length} món)
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-5 text-slate-900 dark:text-slate-100">
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <span>Tóm Tắt Đơn Hàng ({cartItems.length} món)</span>
+                {deliveryType === 'scheduled' ? (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    ⏰ Hẹn giờ: {scheduledTime}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    ⚡ Giao hỏa tốc
+                  </span>
+                )}
               </h3>
 
               {/* Items review */}
@@ -673,11 +902,11 @@ export default function Checkout() {
                         className="w-10 h-10 rounded-xl object-cover shrink-0"
                       />
                       <div className="truncate">
-                        <p className="font-bold text-slate-800 truncate">{item.food.name}</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{item.food.name}</p>
                         <p className="text-[11px] text-slate-400">SL: {item.quantity} phần</p>
                       </div>
                     </div>
-                    <span className="font-bold text-slate-700 shrink-0">
+                    <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">
                       {formatVND(item.food.price * item.quantity)}
                     </span>
                   </div>
@@ -685,22 +914,28 @@ export default function Checkout() {
               </div>
 
               {/* Calculations */}
-              <div className="space-y-2 pt-3 border-t border-slate-100 text-xs text-slate-600">
+              <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400">
                 <div className="flex justify-between">
                   <span>Tạm tính:</span>
-                  <span className="font-semibold text-slate-800">{formatVND(subtotal)}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{formatVND(subtotal)}</span>
                 </div>
                 {discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-semibold">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                     <span>Voucher ({promoCode}):</span>
                     <span>-{formatVND(discount)}</span>
                   </div>
                 )}
+                {pointsDiscountAmount > 0 && (
+                  <div className="flex justify-between text-purple-600 dark:text-purple-400 font-semibold">
+                    <span>Điểm VIP ({currentTier.name}):</span>
+                    <span>-{formatVND(pointsDiscountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span>Phí ship nội thành Hà Nội:</span>
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {deliveryFee === 0 ? (
-                      <span className="text-emerald-600 font-bold uppercase">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase">
                         Miễn phí {freeShipThreshold > 0 ? `(Đơn > ${formatVND(freeShipThreshold)})` : ''}
                       </span>
                     ) : (
@@ -715,9 +950,17 @@ export default function Checkout() {
                     )}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-extrabold text-slate-900 pt-3 border-t border-slate-100">
-                  <span>Tổng cộng:</span>
-                  <span className="text-xl font-black text-amber-600">{formatVND(total)}</span>
+                {driverTip > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Tip Bác Tài Shipper:</span>
+                    <span>+{formatVND(driverTip)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span>Tổng thanh toán:</span>
+                  <span className="text-xl font-black text-amber-600 dark:text-amber-400">
+                    {formatVND(Math.max(0, total + driverTip - pointsDiscountAmount))}
+                  </span>
                 </div>
               </div>
 
