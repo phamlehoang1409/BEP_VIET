@@ -130,10 +130,10 @@ export default function MyOrders() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-10 pb-24 md:pb-12 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
             Đơn Hàng Của Tôi
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Theo dõi trạng thái giao hàng và xem lại các món ăn đã đặt
           </p>
         </div>
@@ -143,7 +143,7 @@ export default function MyOrders() {
           <button
             onClick={() => fetchOrders(searchPhone)}
             disabled={loading}
-            className="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#151926] border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Cập nhật</span>
@@ -153,27 +153,27 @@ export default function MyOrders() {
 
       {/* Phone Search form if not logged in or searching another phone */}
       {!user && (
-        <form onSubmit={handleLookup} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleLookup} className="bg-white dark:bg-[#12151E] p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <input
               type="tel"
               placeholder="Nhập số điện thoại đã đặt hàng (0912...)"
               value={searchPhone}
               onChange={(e) => setSearchPhone(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold outline-none focus:bg-white focus:border-orange-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border border-slate-200 dark:border-slate-700 text-sm font-semibold outline-none focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 text-slate-900 dark:text-white"
             />
             <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           </div>
           <button
             type="submit"
-            className="px-6 py-2.5 rounded-2xl bg-orange-500 text-white font-bold text-sm hover:bg-orange-600 transition"
+            className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-sm hover:from-amber-600 hover:to-orange-600 transition shadow-md"
           >
             Tra Cứu Đơn
           </button>
           <button
             type="button"
             onClick={() => setIsAuthModalOpen(true)}
-            className="px-4 py-2.5 rounded-2xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 transition"
+            className="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition"
           >
             Đăng Nhập
           </button>
@@ -184,26 +184,26 @@ export default function MyOrders() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-3">
-              <div className="h-5 w-40 rounded shimmer" />
-              <div className="h-16 w-full rounded shimmer" />
+            <div key={i} className="bg-white dark:bg-[#12151E] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="h-5 w-40 rounded shimmer bg-slate-200 dark:bg-slate-800" />
+              <div className="h-16 w-full rounded shimmer bg-slate-200 dark:bg-slate-800" />
             </div>
           ))}
         </div>
       ) : orders.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm space-y-4">
-          <div className="w-16 h-16 rounded-full bg-orange-100 text-orange-600 mx-auto flex items-center justify-center">
+        <div className="p-12 text-center bg-white dark:bg-[#12151E] rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 border border-amber-200 dark:border-amber-800/40 mx-auto flex items-center justify-center">
             <Package className="w-8 h-8" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">Chưa có đơn hàng nào</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">Chưa có đơn hàng nào</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
             {searchPhone
               ? `Không tìm thấy đơn hàng nào liên kết với số điện thoại ${searchPhone}.`
               : 'Hãy nhập số điện thoại hoặc đăng nhập để xem lịch sử đặt món của bạn.'}
           </p>
           <Link
             to="/menu"
-            className="inline-block px-6 py-2.5 rounded-2xl bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition"
+            className="inline-block px-6 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-xs font-black hover:from-amber-600 hover:to-orange-600 transition shadow-md"
           >
             Đặt Món Ngay
           </Link>
@@ -213,19 +213,19 @@ export default function MyOrders() {
           {orders.map((order) => (
             <div
               key={order.id}
-              className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-100 shadow-sm hover:shadow-md transition space-y-4"
+              className="bg-white dark:bg-[#12151E] rounded-3xl p-5 sm:p-6 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition space-y-4"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-slate-900 text-sm sm:text-base">
+                    <span className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
                       {order.order_code}
                     </span>
                     <span className="text-[11px] text-slate-400">
                       • {new Date(order.created_at).toLocaleDateString('vi-VN')} {new Date(order.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
                     Giao tới: {order.delivery_address}
                   </p>
                 </div>
@@ -241,15 +241,15 @@ export default function MyOrders() {
                         <img
                           src={item.food_image}
                           alt={item.food_name}
-                          className="w-10 h-10 rounded-xl object-cover"
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-700"
                         />
                       )}
                       <div>
-                        <span className="font-bold text-slate-800">{item.food_name}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{item.food_name}</span>
                         <span className="text-slate-400 text-[11px] block">x{item.quantity}</span>
                       </div>
                     </div>
-                    <span className="font-semibold text-slate-700">{formatVND(item.total)}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">{formatVND(item.total)}</span>
                   </div>
                 ))}
               </div>

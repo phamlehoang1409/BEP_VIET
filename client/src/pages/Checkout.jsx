@@ -267,14 +267,14 @@ export default function Checkout() {
       {/* Title */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
+          <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/50 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
             {storeSettings?.delivery_area || 'Giao Hàng Hỏa Tốc Nội Thành Hà Nội'}
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
           Xác Nhận Đơn Hàng & Giao Nhận
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
           Khu vực giao: <strong>{storeSettings?.delivery_area || 'Nội thành Hà Nội'}</strong>. Giờ nhận đơn: <strong>{storeSettings?.open_time || '08:00'} - {storeSettings?.close_time || '23:00'}</strong>. Bảo hiểm nóng sốt 100%.
         </p>
       </div>
@@ -283,17 +283,17 @@ export default function Checkout() {
       {storeSettings && storeSettings.is_currently_open === false && (
         <div 
           onClick={() => showStoreClosedModal()}
-          className="mb-6 p-5 sm:p-6 rounded-3xl bg-rose-50 hover:bg-rose-100/70 border-2 border-rose-300 text-rose-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md transition cursor-pointer"
+          className="mb-6 p-5 sm:p-6 rounded-3xl bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100/70 dark:hover:bg-rose-900/40 border-2 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md transition cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-md shadow-rose-500/25">
               🔴
             </div>
             <div>
-              <h3 className="font-black text-base sm:text-lg text-rose-700">
+              <h3 className="font-black text-base sm:text-lg text-rose-700 dark:text-rose-400">
                 Bếp Việt Gourmet Hiện Đang Tạm Nghỉ - Không Nhận Đơn Mới!
               </h3>
-              <p className="text-xs sm:text-sm text-rose-800/90 mt-0.5 leading-relaxed">
+              <p className="text-xs sm:text-sm text-rose-800/90 dark:text-rose-300 mt-0.5 leading-relaxed">
                 Quán đang tạm ngưng nhận đơn đặt món để chuẩn bị nguyên liệu và bảo dưỡng bếp. Giờ phục vụ: <strong>{storeSettings.open_time || '08:00'} - {storeSettings.close_time || '23:00'}</strong>. Quý khách vui lòng quay lại sau hoặc liên hệ Hotline <strong>{storeSettings.hotline || '0353859726'}</strong>.
               </p>
             </div>
@@ -315,7 +315,7 @@ export default function Checkout() {
                 e.stopPropagation();
                 navigate('/menu');
               }}
-              className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition"
+              className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-slate-700 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 font-bold text-xs transition"
             >
               Thực Đơn
             </button>
@@ -328,13 +328,13 @@ export default function Checkout() {
           {/* LEFT: Customer & Address Form */}
           <div className="lg:col-span-7 space-y-6">
             {/* Contact Information */}
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-5">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-5">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
                     1. Thông Tin Người Nhận
                   </h3>
                   <p className="text-xs text-slate-400">Shipper và quán sẽ gọi theo số này khi xác nhận & giao tới</p>
@@ -344,7 +344,7 @@ export default function Checkout() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                     Họ và Tên <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -355,10 +355,10 @@ export default function Checkout() {
                       setCustomerName(e.target.value);
                       if (errors.name) setErrors({ ...errors, name: null });
                     }}
-                    className={`w-full px-4 py-2.5 rounded-2xl bg-slate-50 border text-sm font-semibold outline-none transition ${
+                    className={`w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border text-sm font-semibold outline-none transition text-slate-900 dark:text-white ${
                       errors.name
                         ? 'border-rose-400 bg-rose-50/20'
-                        : 'border-slate-200 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-100'
+                        : 'border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 focus:ring-4 focus:ring-amber-100 dark:focus:ring-amber-900/30'
                     }`}
                   />
                   {errors.name && <p className="text-xs text-rose-500 mt-1">{errors.name}</p>}
@@ -366,7 +366,7 @@ export default function Checkout() {
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                     Số Điện Thoại Việt Nam <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -378,10 +378,10 @@ export default function Checkout() {
                         setCustomerPhone(e.target.value);
                         if (errors.phone) setErrors({ ...errors, phone: null });
                       }}
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border text-sm font-semibold outline-none transition ${
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border text-sm font-semibold outline-none transition text-slate-900 dark:text-white ${
                         errors.phone
                           ? 'border-rose-400 bg-rose-50/20'
-                          : 'border-slate-200 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-100'
+                          : 'border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 focus:ring-4 focus:ring-amber-100 dark:focus:ring-amber-900/30'
                       }`}
                     />
                     <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -396,15 +396,15 @@ export default function Checkout() {
             </div>
 
             {/* Section 2: Delivery Address */}
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-600 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold border border-amber-500/30 shrink-0">
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
                     <span>2. Địa Chỉ Giao Hàng</span>
-                    <span className="text-[10px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                    <span className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
                       Hà Nội
                     </span>
                   </h3>
@@ -416,16 +416,16 @@ export default function Checkout() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* District */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                     Quận / Huyện <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={district}
                     onChange={handleDistrictChange}
-                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold outline-none focus:bg-white focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border border-slate-200 dark:border-slate-700 text-sm font-semibold outline-none focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 transition text-slate-900 dark:text-white"
                   >
                     {HANOI_INNER_DISTRICTS.map((d) => (
-                      <option key={d} value={d}>
+                      <option key={d} value={d} className="bg-white dark:bg-[#181C2A] text-slate-900 dark:text-white">
                         {d}
                       </option>
                     ))}
@@ -434,16 +434,16 @@ export default function Checkout() {
 
                 {/* Ward */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                     Phường / Xã
                   </label>
                   <select
                     value={ward}
                     onChange={(e) => setWard(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold outline-none focus:bg-white focus:border-amber-500 transition"
+                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border border-slate-200 dark:border-slate-700 text-sm font-semibold outline-none focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 transition text-slate-900 dark:text-white"
                   >
                     {wards.map((w) => (
-                      <option key={w} value={w}>
+                      <option key={w} value={w} className="bg-white dark:bg-[#181C2A] text-slate-900 dark:text-white">
                         {w}
                       </option>
                     ))}
@@ -453,7 +453,7 @@ export default function Checkout() {
 
               {/* Street Address Input */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                   Số nhà, Tên Đường, Tòa nhà, Chung cư <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -465,10 +465,10 @@ export default function Checkout() {
                       setStreetAddress(e.target.value);
                       if (errors.address) setErrors({ ...errors, address: null });
                     }}
-                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 border text-sm font-semibold outline-none transition ${
+                    className={`w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border text-sm font-semibold outline-none transition text-slate-900 dark:text-white ${
                       errors.address
                         ? 'border-rose-400 bg-rose-50/20'
-                        : 'border-slate-200 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-100'
+                        : 'border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-[#1e2335] focus:border-amber-500 focus:ring-4 focus:ring-amber-100 dark:focus:ring-amber-900/30'
                     }`}
                   />
                   <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -653,14 +653,14 @@ export default function Checkout() {
             </div>
 
             {/* Payment Methods */}
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-7 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900">
-                    3. Phương Thức Thanh Toán
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    4. Phương Thức Thanh Toán
                   </h3>
                   <p className="text-xs text-slate-400">Chọn cách thức thanh toán tiện lợi nhất cho bạn</p>
                 </div>
@@ -671,8 +671,8 @@ export default function Checkout() {
                 <label
                   className={`p-4 rounded-2xl border-2 flex flex-col justify-between cursor-pointer transition ${
                     paymentMethod === 'COD'
-                      ? 'border-amber-500 bg-amber-50/40 text-amber-950 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                      ? 'border-amber-500 bg-amber-50/40 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-[#181C2A]'
                   }`}
                 >
                   <input
@@ -684,7 +684,7 @@ export default function Checkout() {
                     className="sr-only"
                   />
                   <div className="flex items-center justify-between mb-2">
-                    <Banknote className="w-5 h-5 text-emerald-600" />
+                    <Banknote className="w-5 h-5 text-emerald-500" />
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-500 flex items-center justify-center">
                       {paymentMethod === 'COD' && (
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -692,8 +692,8 @@ export default function Checkout() {
                     </span>
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-slate-800">Tiền Mặt (COD)</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Trả khi nhận đồ ăn</p>
+                    <h5 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Tiền Mặt (COD)</h5>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Trả khi nhận đồ ăn</p>
                   </div>
                 </label>
 
@@ -701,8 +701,8 @@ export default function Checkout() {
                 <label
                   className={`p-4 rounded-2xl border-2 flex flex-col justify-between cursor-pointer transition ${
                     paymentMethod === 'BANKING'
-                      ? 'border-amber-500 bg-amber-50/40 text-amber-950 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                      ? 'border-amber-500 bg-amber-50/40 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-[#181C2A]'
                   }`}
                 >
                   <input
@@ -714,7 +714,7 @@ export default function Checkout() {
                     className="sr-only"
                   />
                   <div className="flex items-center justify-between mb-2">
-                    <CreditCard className="w-5 h-5 text-sky-600" />
+                    <CreditCard className="w-5 h-5 text-sky-400" />
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-500 flex items-center justify-center">
                       {paymentMethod === 'BANKING' && (
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -722,8 +722,8 @@ export default function Checkout() {
                     </span>
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-slate-800">VietQR / Banking</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Chuyển khoản tức thì</p>
+                    <h5 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">VietQR / Banking</h5>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Chuyển khoản tức thì</p>
                   </div>
                 </label>
 
@@ -731,8 +731,8 @@ export default function Checkout() {
                 <label
                   className={`p-4 rounded-2xl border-2 flex flex-col justify-between cursor-pointer transition ${
                     paymentMethod === 'MOMO'
-                      ? 'border-amber-500 bg-amber-50/40 text-amber-950 shadow-sm'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50'
+                      ? 'border-amber-500 bg-amber-50/40 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50 dark:bg-[#181C2A]'
                   }`}
                 >
                   <input
@@ -744,7 +744,7 @@ export default function Checkout() {
                     className="sr-only"
                   />
                   <div className="flex items-center justify-between mb-2">
-                    <Smartphone className="w-5 h-5 text-pink-600" />
+                    <Smartphone className="w-5 h-5 text-pink-400" />
                     <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-500 flex items-center justify-center">
                       {paymentMethod === 'MOMO' && (
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -752,8 +752,8 @@ export default function Checkout() {
                     </span>
                   </div>
                   <div>
-                    <h5 className="font-extrabold text-xs text-slate-800">Ví MoMo</h5>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Quét mã ví MoMo</p>
+                    <h5 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">Ví MoMo</h5>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Quét mã ví MoMo</p>
                   </div>
                 </label>
               </div>
@@ -763,10 +763,10 @@ export default function Checkout() {
           {/* RIGHT: Order Summary & Coupon Picker */}
           <div className="lg:col-span-5 space-y-6 sticky top-24">
             {/* COUPON & VOUCHER BOX */}
-            <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <div className="bg-white dark:bg-[#12151E] p-5 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <Ticket className="w-5 h-5 text-amber-500" />
-                <h3 className="font-extrabold text-sm text-slate-900">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                   Mã Giảm Giá & Voucher Bếp Việt
                 </h3>
               </div>
@@ -778,13 +778,13 @@ export default function Checkout() {
                   placeholder="Nhập mã (VD: INDOMIE20)"
                   value={inputCoupon}
                   onChange={(e) => setInputCoupon(e.target.value.toUpperCase())}
-                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold uppercase tracking-wider outline-none focus:border-amber-500 focus:bg-white transition"
+                  className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#181C2A] border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold uppercase tracking-wider outline-none focus:border-amber-500 focus:bg-white dark:focus:bg-[#1e2335] text-slate-900 dark:text-white transition"
                 />
                 <button
                   type="button"
                   onClick={() => handleApplyCoupon(inputCoupon)}
                   disabled={applyingCoupon || !inputCoupon.trim()}
-                  className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-amber-300 font-bold text-xs transition"
+                  className="px-4 py-2.5 rounded-2xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-amber-300 dark:text-slate-950 font-bold text-xs transition"
                 >
                   {applyingCoupon ? '...' : 'Áp Dụng'}
                 </button>
@@ -794,8 +794,8 @@ export default function Checkout() {
                 <p
                   className={`text-xs font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 ${
                     discount > 0
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-600 border border-rose-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                   }`}
                 >
                   {discount > 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
@@ -805,7 +805,7 @@ export default function Checkout() {
 
               {/* Quick voucher cards */}
               {availableCoupons.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Voucher Gợi Ý Cho Bạn (Bấm để áp dụng):
                   </p>
@@ -817,20 +817,20 @@ export default function Checkout() {
                         onClick={() => handleApplyCoupon(c.code)}
                         className={`w-full text-left p-2.5 rounded-2xl border transition flex items-center justify-between text-xs ${
                           promoCode === c.code
-                            ? 'bg-amber-50/70 border-amber-400 text-amber-950 font-bold'
-                            : 'bg-slate-50/70 border-slate-200/80 hover:border-amber-300 text-slate-700'
+                            ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-300 font-bold'
+                            : 'bg-slate-50/70 dark:bg-[#181C2A] border-slate-200/80 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500 text-slate-700 dark:text-slate-300'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <Tag className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                           <div>
-                            <span className="font-mono font-black text-amber-600">{c.code}</span>
-                            <span className="text-[11px] text-slate-500 ml-1.5">
+                            <span className="font-mono font-black text-amber-600 dark:text-amber-400">{c.code}</span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 ml-1.5">
                               {c.description || (c.discount_type === 'percent' ? `Giảm ${c.discount_value}%` : `Giảm ${formatVND(c.discount_value)}`)}
                             </span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
                           {promoCode === c.code ? 'Đã Chọn' : 'Chọn Mã'}
                         </span>
                       </button>
