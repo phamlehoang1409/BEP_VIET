@@ -27,6 +27,7 @@ import FoodCard from '../components/FoodCard';
 import FoodDetailModal from '../components/FoodDetailModal';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/Toast';
+import { formatVND } from '../utils/vietnamData';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -142,7 +143,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* VIP LUXURY SHOWCASE CARDS HUB (NO IMAGE, PURE LUXURY INTERACTIVE CARDS) */}
+          {/* VIP LUXURY SHOWCASE CARDS HUB (REAL MENU DISHES & EXACT PRICING) */}
           <div className="lg:col-span-5 relative">
             {/* Background Glow */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-amber-500/20 via-orange-500/10 to-rose-500/15 blur-2xl pointer-events-none" />
@@ -160,7 +161,7 @@ export default function Home() {
                       Bếp Việt Signature
                     </h4>
                     <p className="text-[10px] text-slate-400 font-medium">
-                      Tiêu Chuẩn Hương Vị 5 Sao
+                      Món Nổi Bật Trong Thực Đơn
                     </p>
                   </div>
                 </div>
@@ -171,61 +172,44 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 3 Signature Highlights */}
+              {/* Dynamic Real Foods From Menu */}
               <div className="space-y-2.5">
-                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🥩</span>
-                    <div>
-                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
-                        Mì Indomie Bò Trứng Lòng Đào
-                      </h5>
-                      <p className="text-[10px] text-slate-400">
-                        Bò Mỹ mềm thơm, sốt cay ngọt, bắp ngọt giòn
-                      </p>
+                {(featuredFoods.length > 0 ? featuredFoods : foods).slice(0, 3).map((dish, idx) => (
+                  <div
+                    key={dish.id || idx}
+                    onClick={() => setSelectedFood(dish)}
+                    className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 hover:border-amber-400/50 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer active:scale-98 shadow-sm"
+                    title="Bấm để xem chi tiết và đặt món"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition">
+                        {dish.spicy_level > 0 ? '🌶️' : idx === 0 ? '🍜' : idx === 1 ? '🥓' : '🍲'}
+                      </div>
+                      <div className="min-w-0">
+                        <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition truncate">
+                          {dish.name}
+                        </h5>
+                        <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                          {dish.description || 'Món ngon chuẩn vị, nguyên liệu tươi ngon mỗi ngày'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs sm:text-sm font-black text-amber-400">
+                        {formatVND(dish.price)}
+                      </div>
+                      {dish.original_price && dish.original_price > dish.price ? (
+                        <div className="text-[9px] text-slate-400 line-through">
+                          {formatVND(dish.original_price)}
+                        </div>
+                      ) : (
+                        <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                          {dish.category_name || 'Bếp Việt'}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-black text-amber-400">55.000₫</div>
-                    <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Hot #1</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🥓</span>
-                    <div>
-                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
-                        Mì Indomie Xá Xíu Quay Mật Ong
-                      </h5>
-                      <p className="text-[10px] text-slate-400">
-                        Xém cạnh giòn bì, lạp xưởng trứng cút béo ngậy
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-black text-amber-400">52.000₫</div>
-                    <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Signature</span>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/20 transition flex items-center justify-between group cursor-pointer" onClick={() => navigate('/menu')}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🦐</span>
-                    <div>
-                      <h5 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-amber-300 transition">
-                        Mì Indomie Hải Sản Sa Tế
-                      </h5>
-                      <p className="text-[10px] text-slate-400">
-                        Tôm tươi bóc vỏ, sốt sa tế cay nồng đậm đà
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-black text-amber-400">59.000₫</div>
-                    <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded">Cay Nồng</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* VIP Live Badge & Quick Link */}
@@ -242,17 +226,6 @@ export default function Home() {
                   <span>Xem Toàn Bộ Món</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
-              </div>
-            </div>
-
-            {/* Floating Live Notification Badge */}
-            <div className="hidden sm:flex absolute -bottom-4 -left-4 z-20 bg-[#161922]/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-xl text-white border border-amber-500/40 items-center gap-2.5 animate-bounce">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
-                🛵
-              </div>
-              <div className="text-left">
-                <p className="text-[10px] text-slate-400 font-medium">Vừa hoàn tất giao đơn:</p>
-                <p className="text-xs font-black text-amber-300">#HN-8842 Cầu Giấy (1p trước)</p>
               </div>
             </div>
           </div>
