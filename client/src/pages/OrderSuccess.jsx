@@ -16,7 +16,9 @@ import {
   ShieldCheck,
   RotateCw,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  Bell,
+  BellRing
 } from 'lucide-react';
 import { getOrderById, getSocket, cancelOrder, switchToCod } from '../api';
 import { formatVND } from '../utils/vietnamData';
@@ -26,6 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import ConfirmModal from '../components/ConfirmModal';
 import VietQRPaymentGateway from '../components/VietQRPaymentGateway';
+import { notificationService } from '../utils/notificationService';
 
 export default function OrderSuccess() {
   const { id } = useParams();
@@ -42,6 +45,19 @@ export default function OrderSuccess() {
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
   const [hasTriggeredConfetti, setHasTriggeredConfetti] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(notificationService.getPermission());
+
+  const handleEnableNotification = async () => {
+    const granted = await notificationService.requestPermission();
+    if (granted) {
+      setNotifPermission('granted');
+      notificationService.playChime();
+      showToast('🔔 Đã bật thông báo giao hàng thành công!', 'success');
+      notificationService.notifyOrderStatus(order?.order_code || order?.id, 'confirmed', order?.customer_name || 'Bạn');
+    } else {
+      showToast('Bạn đã từ chối quyền thông báo trên trình duyệt', 'info');
+    }
+  };
 
   // Fetch or sync order
   const syncOrder = () => {
@@ -273,7 +289,31 @@ export default function OrderSuccess() {
         </div>
       )}
 
-      {/* 5-STEP LIVE TRACKING STEPPER WITH ANIMATED CONNECTING PROGRESS LINE */}
+      {/* WEB PUSH NOTIFICATION ALERT CARD (When not granted) */}
+      {!isCancelled && order?.status !== 'cancelled' && notifPermission !== 'granted' && (
+        <div className="bg-gradient-to-r from-indigo-900/40 via-purple-900/30 to-indigo-900/40 border border-indigo-500/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm text-white">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xl shrink-0 border border-indigo-500/40">
+              <BellRing className="w-5 h-5 text-amber-300 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm sm:text-base text-white">
+                Bật Chuông Nhận Thông Báo Khi Shipper Tới Cửa!
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Nhận thông báo rung & hiển thị trên điện thoại khi quán nấu xong và shipper xuất phát giao tới.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleEnableNotification}
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-md transition active:scale-95 shrink-0 whitespace-nowrap flex items-center gap-1.5"
+          >
+            <Bell className="w-4 h-4 text-slate-950" />
+            <span>Bật Thông Báo Ngay</span>
+          </button>
+        </div>
+      )}
       <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <div>

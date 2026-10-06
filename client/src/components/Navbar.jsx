@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, UtensilsCrossed, Shield, Search, PhoneCall, LogOut, Package, Clock, Phone } from 'lucide-react';
+import { ShoppingBag, User, UtensilsCrossed, Shield, Search, PhoneCall, LogOut, Package, Clock, Phone, Sun, Moon, Bot, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { formatVND } from '../utils/vietnamData';
 import { getStoreSettings } from '../api';
 
-export default function Navbar() {
+export default function Navbar({ onOpenAI }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount, subtotal, setIsCartOpen, storeSettings, showStoreClosedModal } = useCart();
   const { user, logout, setIsAuthModalOpen, isAdmin } = useAuth();
+  const { theme, toggleTheme, isDarkMode } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [userDropdown, setUserDropdown] = useState(false);
 
@@ -173,7 +175,26 @@ export default function Navbar() {
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            {/* AI Food Sommelier Trigger */}
+            <button
+              onClick={() => onOpenAI && onOpenAI()}
+              className="flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-amber-500/20 hover:from-purple-600/40 hover:to-amber-500/30 text-amber-300 font-bold text-xs border border-purple-500/40 transition active:scale-95 shadow-sm"
+              title="Trợ lý AI tư vấn món hôm nay"
+            >
+              <Bot className="w-4 h-4 text-purple-400" />
+              <span className="hidden sm:inline font-black">AI Gợi Ý</span>
+            </button>
+
+            {/* Dark / Light Mode Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-400 flex items-center justify-center border border-slate-700/60 transition active:scale-95"
+              title={isDarkMode ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối (Luxury Dark)'}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-300" />}
+            </button>
+
             {/* Cart Trigger */}
             <button
               onClick={() => setIsCartOpen(true)}
