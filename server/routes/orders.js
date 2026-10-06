@@ -560,6 +560,74 @@ router.patch('/:id/confirm', requireAdmin, async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/reject - Admin explicitly rejects / denies an order with a reason
+router.patch('/:id/reject', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Quán quá tải / Tạm ngưng phục vụ' } = req.body;
+
+    if (!supabase) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    // Get current order note
+    const { data: curOrder } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!curOrder) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại' });
+    }
+
+    const rejectionReason = (reason || 'Quán quá tải / Tạm ngưng phục vụ').trim();
+    const updatedNote = curOrder.note
+      ? `${curOrder.note} | [Quán từ chối: ${rejectionReason}]`
+      : `[Quán từ chối: ${rejectionReason}]`;
+
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update({
+        status: 'cancelled',
+        note: updatedNote,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*, order_items(*)')
+      .maybeSingle();
+
+    if (error || !updated) {
+      return res.status(error ? 500 : 404).json({ error: error ? error.message : 'Lỗi khi từ chối đơn hàng' });
+    }
+
+    const orderFormatted = {
+      ...updated,
+      items: updated.order_items || [],
+      reject_reason: rejectionReason
+    };
+
+    // Broadcast order_rejected & order_status_updated
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`room_${updated.customer_phone}`).to('admin_room').emit('order_status_updated', orderFormatted);
+      io.to(`room_${updated.customer_phone}`).emit('order_rejected', {
+        orderId: updated.id,
+        orderCode: updated.order_code,
+        reason: rejectionReason
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Đã từ chối đơn hàng #${updated.order_code}!`,
+      order: orderFormatted
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // PATCH /api/orders/:id/delivery-fee - Admin adjusts delivery fee for an order
 router.patch('/:id/delivery-fee', requireAdmin, async (req, res) => {
   try {

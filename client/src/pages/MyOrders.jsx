@@ -109,10 +109,12 @@ export default function MyOrders() {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status, note) => {
     switch (status) {
       case 'pending':
         return <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">Chờ xác nhận</span>;
+      case 'confirmed':
+        return <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">Đã xác nhận</span>;
       case 'preparing':
         return <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold">Đang nấu nóng</span>;
       case 'delivering':
@@ -120,7 +122,9 @@ export default function MyOrders() {
       case 'completed':
         return <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">Giao thành công</span>;
       case 'cancelled':
-        return <span className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold">Đã hủy đơn</span>;
+        return note?.includes('[Quán từ chối:')
+          ? <span className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold">Quán từ chối</span>
+          : <span className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold">Đã hủy đơn</span>;
       default:
         return <span className="bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-bold">{status}</span>;
     }
@@ -228,8 +232,13 @@ export default function MyOrders() {
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
                     Giao tới: {order.delivery_address}
                   </p>
+                  {order.note?.includes('[Quán từ chối:') && (
+                    <div className="mt-1.5 inline-block bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-300 text-[11px] font-bold px-2.5 py-1 rounded-xl">
+                      📢 Lý do từ chối: {order.note.match(/\[Quán từ chối:\s*([^\]]+)\]/)?.[1] || 'Quán đang quá tải'}
+                    </div>
+                  )}
                 </div>
-                {getStatusBadge(order.status)}
+                {getStatusBadge(order.status, order.note)}
               </div>
 
               {/* Items */}

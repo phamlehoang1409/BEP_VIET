@@ -24,10 +24,11 @@ import {
   Printer
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { getSocket, getChatRooms, getAllOrders, confirmOrder } from '../../api';
+import { getSocket, getChatRooms, getAllOrders, confirmOrder, rejectOrder, getStoreSettings, updateStoreSettings } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
 import StoreSettingsModal from '../../components/StoreSettingsModal';
+import RejectOrderModal from '../../components/RejectOrderModal';
 import PrintBillModal from '../../components/PrintBillModal';
 import { startOrderAlarm, stopOrderAlarm, playNewOrderChime } from '../../utils/orderAlertSound';
 
@@ -43,10 +44,16 @@ export default function AdminLayout() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Store Reception Status (Open vs Paused)
+  const [isOpenStore, setIsOpenStore] = useState(true);
+  const [togglingStore, setTogglingStore] = useState(false);
+
   // New Order Modal Alert & Print
   const [alertOrder, setAlertOrder] = useState(null);
   const [confirmingOrder, setConfirmingOrder] = useState(false);
   const [printingOrder, setPrintingOrder] = useState(null);
+  const [rejectModalOrder, setRejectModalOrder] = useState(null);
+  const [rejectingOrder, setRejectingOrder] = useState(false);
 
   // STRICT ACCESS CONTROL: Must be logged in as Admin with password 14092006
   // Anyone typing /admin or any /admin/* without admin session is INSTANTLY kicked out to homepage
@@ -129,6 +136,51 @@ export default function AdminLayout() {
     };
   }, [soundEnabled, alertOrder]);
 
+  // Fetch initial store settings and listen to socket updates
+  useEffect(() => {
+    getStoreSettings()
+      .then((res) => {
+        if (res.success && res.settings) {
+          setIsOpenStore(res.settings.is_open !== false);
+        }
+      })
+      .catch(() => {});
+
+    const socket = getSocket();
+    if (socket) {
+      const handleSettingsUpdate = (settings) => {
+        if (settings && settings.is_open !== undefined) {
+          setIsOpenStore(settings.is_open !== false);
+        }
+      };
+      socket.on('store_settings_updated', handleSettingsUpdate);
+      return () => socket.off('store_settings_updated', handleSettingsUpdate);
+    }
+  }, []);
+
+  const handleToggleStoreStatus = async () => {
+    if (togglingStore) return;
+    const nextStatus = !isOpenStore;
+    setTogglingStore(true);
+    try {
+      const res = await updateStoreSettings({ is_open: nextStatus });
+      if (res.success) {
+        setIsOpenStore(nextStatus);
+        showToast(
+          nextStatus
+            ? '🟢 Đã BẬT nhận đơn! Khách hàng có thể tiếp tục đặt món.'
+            : '🔴 Đã TẠM NGƯNG nhận đơn! Khách hàng sẽ thấy thông báo quán tạm nghỉ.',
+          nextStatus ? 'success' : 'warning',
+          5000
+        );
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi cập nhật trạng thái nhận đơn', 'error');
+    } finally {
+      setTogglingStore(false);
+    }
+  };
+
   const handleConfirmAlertOrder = async () => {
     if (!alertOrder || confirmingOrder) return;
     setConfirmingOrder(true);
@@ -143,6 +195,30 @@ export default function AdminLayout() {
       showToast(err.message || 'Lỗi khi xác nhận đơn hàng', 'error');
     } finally {
       setConfirmingOrder(false);
+    }
+  };
+
+  const handleOpenRejectAlert = () => {
+    if (!alertOrder) return;
+    stopOrderAlarm();
+    setRejectModalOrder(alertOrder);
+  };
+
+  const handleExecuteReject = async (orderId, reason) => {
+    setRejectingOrder(true);
+    try {
+      const res = await rejectOrder(orderId, reason);
+      if (res.success) {
+        showToast(`❌ Đã từ chối đơn hàng #${alertOrder?.order_code || orderId}!`, 'info');
+        setRejectModalOrder(null);
+        setAlertOrder(null);
+        stopOrderAlarm();
+        setPendingOrdersCount((c) => Math.max(0, c - 1));
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi từ chối đơn hàng', 'error');
+    } finally {
+      setRejectingOrder(false);
     }
   };
 
@@ -173,12 +249,26 @@ export default function AdminLayout() {
             <span className="text-[10px] text-amber-400 font-bold">Admin Portal</span>
           </div>
         </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-xl bg-slate-800 text-slate-300"
-        >
-          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Quick toggle in mobile header */}
+          <button
+            onClick={handleToggleStoreStatus}
+            disabled={togglingStore}
+            className={`px-2.5 py-1 rounded-xl text-[10px] font-black border transition flex items-center gap-1 ${
+              isOpenStore
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse'
+            }`}
+          >
+            <span>{isOpenStore ? '🟢 Nhận Đơn' : '🔴 Tạm Nghỉ'}</span>
+          </button>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-xl bg-slate-800 text-slate-300"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* SIDEBAR */}
@@ -187,7 +277,7 @@ export default function AdminLayout() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Brand */}
           <div className="flex items-center gap-3 px-2">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-amber-400 to-orange-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-500/20">
@@ -200,6 +290,43 @@ export default function AdminLayout() {
               <span className="inline-block text-[9px] font-black text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/30 mt-0.5">
                 Quản Trị Viên
               </span>
+            </div>
+          </div>
+
+          {/* STORE STATUS TOGGLE (1-TOUCH CONTROL) */}
+          <div className="px-2">
+            <div
+              className={`p-3 rounded-2xl border transition-all ${
+                isOpenStore
+                  ? 'bg-emerald-500/10 border-emerald-500/30'
+                  : 'bg-rose-500/15 border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${isOpenStore ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
+                    {isOpenStore ? 'Đang Nhận Đơn' : 'Tạm Ngưng Nhận'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleToggleStoreStatus}
+                  disabled={togglingStore}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition active:scale-95 shadow ${
+                    isOpenStore
+                      ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                      : 'bg-rose-600 text-white hover:bg-rose-500'
+                  }`}
+                  title="Bấm để chuyển đổi trạng thái nhận đơn của cửa hàng"
+                >
+                  {togglingStore ? '...' : isOpenStore ? 'Tạm Ngưng' : 'Mở Nhận Đơn'}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                {isOpenStore
+                  ? 'Quán đang mở, khách có thể đặt món trên web.'
+                  : 'Quán đang tạm nghỉ, web sẽ chặn không cho đặt đơn.'}
+              </p>
             </div>
           </div>
 
@@ -237,7 +364,7 @@ export default function AdminLayout() {
                   key={link.to}
                   to={link.to}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-3 rounded-2xl font-bold text-xs transition duration-200 ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition duration-200 ${
                     isActive
                       ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/20 font-black'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -259,11 +386,11 @@ export default function AdminLayout() {
         </div>
 
         {/* Bottom Store Settings & Actions */}
-        <div className="pt-4 border-t border-slate-800 space-y-2.5">
+        <div className="pt-3 border-t border-slate-800 space-y-2">
           {/* Store Settings Button */}
           <button
             onClick={() => setIsSettingsModalOpen(true)}
-            className="flex items-center justify-between w-full p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition group"
+            className="flex items-center justify-between w-full p-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition group"
           >
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
@@ -277,7 +404,7 @@ export default function AdminLayout() {
           {/* Switch to customer view */}
           <Link
             to="/"
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700/60 transition"
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700/60 transition"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Về Trang Khách Hàng</span>
@@ -286,7 +413,7 @@ export default function AdminLayout() {
           {/* Admin Logout Button */}
           <button
             onClick={adminLogout}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-bold border border-rose-500/30 transition"
+            className="flex items-center justify-center gap-2 w-full py-2 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-bold border border-rose-500/30 transition"
           >
             <LogOut className="w-4 h-4" />
             <span>Đăng Xuất Admin</span>
@@ -303,6 +430,11 @@ export default function AdminLayout() {
       <StoreSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        onSettingsUpdated={(settings) => {
+          if (settings && settings.is_open !== undefined) {
+            setIsOpenStore(settings.is_open !== false);
+          }
+        }}
       />
 
       {/* FLOATING REAL-TIME ORDER ALERT POPUP MODAL */}
@@ -363,16 +495,25 @@ export default function AdminLayout() {
               )}
             </div>
 
-            {/* Actions */}
-            <div className="space-y-2 pt-2">
-              <button
-                onClick={handleConfirmAlertOrder}
-                disabled={confirmingOrder}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm shadow-xl shadow-emerald-500/30 active:scale-95 transition flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                <span>{confirmingOrder ? 'Đang xác nhận...' : 'XÁC NHẬN ĐƠN HÀNG NGAY (CHẤP THUẬN)'}</span>
-              </button>
+            {/* Actions: CONFIRM vs REJECT */}
+            <div className="space-y-2.5 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  onClick={handleConfirmAlertOrder}
+                  disabled={confirmingOrder}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-xs shadow-xl shadow-emerald-500/30 active:scale-95 transition flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{confirmingOrder ? 'Đang duyệt...' : '✅ NHẬN ĐƠN (DUYỆT)'}</span>
+                </button>
+
+                <button
+                  onClick={handleOpenRejectAlert}
+                  className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs shadow-xl shadow-rose-600/30 active:scale-95 transition flex items-center justify-center gap-1.5 border border-rose-500/40"
+                >
+                  <span>❌ KHÔNG NHẬN (TỪ CHỐI)</span>
+                </button>
+              </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -409,6 +550,15 @@ export default function AdminLayout() {
           </div>
         </div>
       )}
+
+      {/* REJECT ORDER MODAL */}
+      <RejectOrderModal
+        order={rejectModalOrder}
+        isOpen={!!rejectModalOrder}
+        onClose={() => setRejectModalOrder(null)}
+        onConfirmReject={handleExecuteReject}
+        loading={rejectingOrder}
+      />
 
       {/* PRINT BILL MODAL */}
       <PrintBillModal

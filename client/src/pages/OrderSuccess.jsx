@@ -225,15 +225,23 @@ export default function OrderSuccess() {
           </div>
         </div>
       ) : isCancelled ? (
-        /* CANCELLED BANNER */
-        <div className="bg-rose-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl text-center space-y-3 border border-rose-800">
+        /* CANCELLED / REJECTED BANNER */
+        <div className="bg-gradient-to-b from-rose-950 to-slate-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl text-center space-y-3 border border-rose-800">
           <div className="w-16 h-16 bg-rose-500/20 rounded-2xl mx-auto flex items-center justify-center">
             <AlertCircle className="w-9 h-9 text-rose-400" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black">Đơn Hàng Đã Bị Hủy</h1>
-          <p className="text-xs sm:text-sm text-rose-200">
-            Đơn hàng #{order?.order_code} đã được hủy. Quý khách vui lòng liên hệ hotline 0353859726 nếu cần hỗ trợ.
+          <h1 className="text-2xl sm:text-3xl font-black">
+            {order?.note?.includes('[Quán từ chối:') ? 'Quán Không Thể Nhận Đơn Hàng' : 'Đơn Hàng Đã Bị Hủy'}
+          </h1>
+          <p className="text-xs sm:text-sm text-rose-200 max-w-lg mx-auto">
+            Đơn hàng #{order?.order_code} đã dừng xử lý. Quý khách vui lòng liên hệ Hotline{' '}
+            <a href="tel:0353859726" className="underline font-bold text-amber-300">0353859726</a> nếu cần hỗ trợ thêm.
           </p>
+          {order?.note?.includes('[Quán từ chối:') && (
+            <div className="inline-block bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs px-4 py-2 rounded-2xl font-bold mt-1">
+              📢 Lý do từ chối: {order.note.match(/\[Quán từ chối:\s*([^\]]+)\]/)?.[1] || 'Quán đang quá tải'}
+            </div>
+          )}
         </div>
       ) : (
         /* CONFIRMED & SUCCESS BANNER */

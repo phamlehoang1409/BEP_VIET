@@ -241,6 +241,12 @@ export const confirmOrder = (id) =>
     method: 'PATCH'
   });
 
+export const rejectOrder = (id, reason) =>
+  request(`/orders/${id}/reject`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason })
+  });
+
 export const cancelOrder = (id) =>
   request(`/orders/${id}/cancel`, {
     method: 'PATCH'

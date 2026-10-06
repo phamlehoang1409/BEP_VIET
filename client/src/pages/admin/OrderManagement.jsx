@@ -27,13 +27,17 @@ import {
   getAllOrders,
   updateOrderStatus,
   confirmOrder,
+  rejectOrder,
   updateOrderDeliveryFee,
   cleanupOldOrders,
+  getStoreSettings,
+  updateStoreSettings,
   getSocket
 } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
 import { useToast } from '../../components/Toast';
 import StoreSettingsModal from '../../components/StoreSettingsModal';
+import RejectOrderModal from '../../components/RejectOrderModal';
 import PrintBillModal from '../../components/PrintBillModal';
 import { playNewOrderChime, speakNewOrder } from '../../utils/orderAlertSound';
 
@@ -46,6 +50,14 @@ export default function OrderManagement() {
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
   const [printingOrder, setPrintingOrder] = useState(null);
+
+  // Store Reception Status
+  const [isOpenStore, setIsOpenStore] = useState(true);
+  const [togglingStore, setTogglingStore] = useState(false);
+
+  // Reject Modal
+  const [rejectModalOrder, setRejectModalOrder] = useState(null);
+  const [rejecting, setRejecting] = useState(false);
 
   // Store Settings Modal trigger
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -82,6 +94,14 @@ export default function OrderManagement() {
 
   // Listen to new orders and status updates in real time
   useEffect(() => {
+    getStoreSettings()
+      .then((res) => {
+        if (res.success && res.settings) {
+          setIsOpenStore(res.settings.is_open !== false);
+        }
+      })
+      .catch(() => {});
+
     const socket = getSocket();
 
     const handleNewOrder = (newOrder) => {
@@ -107,16 +127,47 @@ export default function OrderManagement() {
       setDeclaredOrderIds((prev) => new Set([...prev, data.orderId]));
     };
 
+    const handleSettingsUpdate = (settings) => {
+      if (settings && settings.is_open !== undefined) {
+        setIsOpenStore(settings.is_open !== false);
+      }
+    };
+
     socket.on('new_order', handleNewOrder);
     socket.on('order_status_updated', handleStatusUpdate);
     socket.on('customer_declared_payment', handleDeclaredPayment);
+    socket.on('store_settings_updated', handleSettingsUpdate);
 
     return () => {
       socket.off('new_order', handleNewOrder);
       socket.off('order_status_updated', handleStatusUpdate);
       socket.off('customer_declared_payment', handleDeclaredPayment);
+      socket.off('store_settings_updated', handleSettingsUpdate);
     };
   }, []);
+
+  const handleToggleStoreStatus = async () => {
+    if (togglingStore) return;
+    const nextStatus = !isOpenStore;
+    setTogglingStore(true);
+    try {
+      const res = await updateStoreSettings({ is_open: nextStatus });
+      if (res.success) {
+        setIsOpenStore(nextStatus);
+        showToast(
+          nextStatus
+            ? '🟢 Đã BẬT nhận đơn! Khách hàng có thể tiếp tục đặt món.'
+            : '🔴 Đã TẠM NGƯNG nhận đơn! Khách hàng sẽ thấy thông báo quán tạm nghỉ.',
+          nextStatus ? 'success' : 'warning',
+          5000
+        );
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi cập nhật trạng thái nhận đơn', 'error');
+    } finally {
+      setTogglingStore(false);
+    }
+  };
 
   const handleConfirm = async (orderId) => {
     try {
@@ -132,6 +183,32 @@ export default function OrderManagement() {
       showToast(err.message || 'Lỗi khi xác nhận đơn hàng', 'error');
     } finally {
       setConfirmingId(null);
+    }
+  };
+
+  const handleRejectOrder = async (orderId, reason) => {
+    setRejecting(true);
+    try {
+      const res = await rejectOrder(orderId, reason);
+      if (res.success) {
+        showToast(`❌ Đã từ chối đơn hàng thành công!`, 'info');
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  status: 'cancelled',
+                  note: o.note ? `${o.note} | [Quán từ chối: ${reason}]` : `[Quán từ chối: ${reason}]`
+                }
+              : o
+          )
+        );
+        setRejectModalOrder(null);
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi từ chối đơn', 'error');
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -211,6 +288,21 @@ export default function OrderManagement() {
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {/* Quick 1-touch Store Reception Switch */}
+          <button
+            onClick={handleToggleStoreStatus}
+            disabled={togglingStore}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-black transition active:scale-95 shadow ${
+              isOpenStore
+                ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
+                : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/50 animate-pulse'
+            }`}
+            title="Bấm để bật hoặc tạm ngưng nhận đơn hàng mới từ khách"
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${isOpenStore ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+            <span>{togglingStore ? 'Đang lưu...' : isOpenStore ? '🟢 Đang Nhận Đơn' : '🔴 Tạm Ngưng Nhận Đơn'}</span>
+          </button>
+
           {/* Quick Ship & Store Hours Button */}
           <button
             onClick={() => setIsSettingsOpen(true)}
@@ -324,7 +416,7 @@ export default function OrderManagement() {
                     : 'border border-slate-700/60 hover:border-slate-600'
                 }`}
               >
-                {/* PENDING BANNER & INSTANT APPROVE BUTTON */}
+                {/* PENDING BANNER: INSTANT APPROVE VS REJECT */}
                 {isPending && (
                   <div
                     className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
@@ -367,20 +459,31 @@ export default function OrderManagement() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleConfirm(order.id)}
-                      disabled={confirmingId === order.id}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition shrink-0"
-                    >
-                      <Zap className="w-4 h-4 fill-slate-950" />
-                      <span>
-                        {confirmingId === order.id
-                          ? 'Đang duyệt...'
-                          : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
-                          ? '⚡ ĐÃ NHẬN TIỀN - DUYỆT BẾP NẤU'
-                          : '⚡ XÁC NHẬN ĐƠN HÀNG NGAY'}
-                      </span>
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap sm:flex-nowrap">
+                      {/* APPROVE BUTTON */}
+                      <button
+                        onClick={() => handleConfirm(order.id)}
+                        disabled={confirmingId === order.id}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition"
+                      >
+                        <Zap className="w-4 h-4 fill-slate-950" />
+                        <span>
+                          {confirmingId === order.id
+                            ? 'Đang duyệt...'
+                            : ['BANKING', 'MOMO', 'vietqr', 'banking'].includes(order.payment_method)
+                            ? '⚡ NHẬN ĐƠN (ĐÃ NHẬN TIỀN)'
+                            : '⚡ NHẬN ĐƠN (DUYỆT)'}
+                        </span>
+                      </button>
+
+                      {/* REJECT BUTTON */}
+                      <button
+                        onClick={() => setRejectModalOrder(order)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs shadow-lg shadow-rose-600/25 active:scale-95 transition border border-rose-500/40"
+                      >
+                        <span>❌ TỪ CHỐI ĐƠN</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -423,10 +526,10 @@ export default function OrderManagement() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {order.status === 'pending' && (
                       <button
-                        onClick={() => handleStatusChange(order.id, 'cancelled')}
+                        onClick={() => setRejectModalOrder(order)}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 text-[11px] font-bold transition border border-rose-500/30"
                       >
-                        ❌ Hủy Đơn
+                        ❌ Không Nhận Đơn
                       </button>
                     )}
                     {order.status === 'confirmed' && (
@@ -438,10 +541,10 @@ export default function OrderManagement() {
                           🍳 Bếp Đang Nấu
                         </button>
                         <button
-                          onClick={() => handleStatusChange(order.id, 'cancelled')}
+                          onClick={() => setRejectModalOrder(order)}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-400 text-[11px] font-bold transition border border-rose-500/30"
                         >
-                          ❌ Hủy Đơn
+                          ❌ Hủy / Không Nhận
                         </button>
                       </>
                     )}
@@ -468,7 +571,7 @@ export default function OrderManagement() {
                     )}
                     {order.status === 'cancelled' && (
                       <span className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 text-[11px] font-black border border-rose-500/30">
-                        ❌ Đã Hủy
+                        ❌ Đã Từ Chối / Đã Hủy
                       </span>
                     )}
                   </div>
@@ -684,6 +787,15 @@ export default function OrderManagement() {
           </div>
         </div>
       )}
+
+      {/* REJECT ORDER MODAL */}
+      <RejectOrderModal
+        order={rejectModalOrder}
+        isOpen={!!rejectModalOrder}
+        onClose={() => setRejectModalOrder(null)}
+        onConfirmReject={handleRejectOrder}
+        loading={rejecting}
+      />
 
       {/* STORE SETTINGS MODAL */}
       <StoreSettingsModal
