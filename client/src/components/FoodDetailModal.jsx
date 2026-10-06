@@ -22,7 +22,6 @@ export default function FoodDetailModal({ food, onClose }) {
       return;
     }
     addToCart(food, quantity, note);
-    showToast(`Đã thêm ${quantity}x "${food.name}" vào giỏ hàng!`, 'success');
     onClose();
   };
 

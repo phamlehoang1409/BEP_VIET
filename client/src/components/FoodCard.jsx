@@ -19,7 +19,6 @@ export default function FoodCard({ food, onOpenDetail }) {
       return;
     }
     addToCart(food, 1);
-    showToast(`Đã thêm "${food.name}" vào giỏ hàng!`, 'success');
   };
 
   const hasDiscount = food.original_price && food.original_price > food.price;
