@@ -39,6 +39,7 @@ export default function OrderSuccess() {
   const { setIsChatOpen } = useChat();
   const { user, setIsAuthModalOpen } = useAuth();
   const { reorderItems } = useCart();
+  const { currentTier } = useLoyalty();
   
   const { showToast } = useToast();
   const [cancelling, setCancelling] = useState(false);
