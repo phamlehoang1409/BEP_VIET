@@ -8,11 +8,25 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html.dark {
+    color-scheme: dark;
+    background-color: #08090E;
+    color: #F8FAFC;
+  }
+
+  html.dark body {
+    background-color: #08090E;
+    color: #F8FAFC;
+  }
+
   body {
     overflow-x: hidden;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+    background-color: #FAF8F5;
+    color: #0F172A;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   input, textarea, [contenteditable="true"] {

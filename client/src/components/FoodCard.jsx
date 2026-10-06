@@ -30,10 +30,10 @@ export default function FoodCard({ food, onOpenDetail }) {
   return (
     <div
       onClick={() => onOpenDetail && onOpenDetail(food)}
-      className="group relative bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-400/60 transition-all duration-300 flex flex-col cursor-pointer transform hover:-translate-y-1"
+      className="group relative bg-white dark:bg-[#12151E] rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)] hover:shadow-xl hover:shadow-amber-500/10 hover:border-amber-400/60 dark:hover:border-amber-500/50 transition-all duration-300 flex flex-col cursor-pointer transform hover:-translate-y-1"
     >
       {/* Food Image Container */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         <img
           src={food.image}
           alt={food.name}
@@ -65,7 +65,7 @@ export default function FoodCard({ food, onOpenDetail }) {
           </div>
 
           {/* Rating Badge */}
-          <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-sm text-xs font-black text-slate-900 border border-slate-100">
+          <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-sm text-xs font-black text-slate-900 dark:text-amber-300 border border-slate-100 dark:border-slate-800">
             <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
             <span>{food.rating ? food.rating.toFixed(1) : '5.0'}</span>
           </div>
@@ -86,40 +86,40 @@ export default function FoodCard({ food, onOpenDetail }) {
         <div>
           {/* Metadata chips */}
           <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 mb-1.5 flex-wrap">
-            <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200/50">
-              <Clock className="w-3 h-3 text-amber-600" />
+            <span className="flex items-center gap-1 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md border border-amber-200/50 dark:border-amber-500/20">
+              <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               {food.prep_time || 15}p
             </span>
             {food.spicy_level > 0 && (
-              <span className="flex items-center gap-0.5 bg-rose-50 text-rose-600 px-2 py-0.5 rounded-md border border-rose-200/50">
+              <span className="flex items-center gap-0.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-200/50 dark:border-rose-500/20">
                 <Flame className="w-3 h-3 fill-rose-500" />
                 {food.spicy_level === 1 ? 'Cay nhẹ' : 'Cay nồng'}
               </span>
             )}
             {food.category_name && (
-              <span className="bg-slate-100 px-2 py-0.5 rounded-md text-slate-600 truncate max-w-[120px]">
+              <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-slate-600 dark:text-slate-300 truncate max-w-[120px]">
                 {food.category_name}
               </span>
             )}
           </div>
 
-          <h3 className="font-extrabold text-slate-900 text-base sm:text-lg group-hover:text-amber-600 transition-colors line-clamp-1">
+          <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">
             {food.name}
           </h3>
 
-          <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
             {food.description || 'Món ngon chuẩn vị, nguyên liệu tươi sạch mỗi ngày.'}
           </p>
         </div>
 
         {/* Price & Action Button */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
-            <div className="text-base sm:text-lg font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            <div className="text-base sm:text-lg font-black bg-gradient-to-r from-orange-600 via-amber-500 to-amber-600 bg-clip-text text-transparent">
               {formatVND(food.price)}
             </div>
             {hasDiscount && (
-              <div className="text-xs text-slate-400 line-through font-medium">
+              <div className="text-xs text-slate-400 dark:text-slate-500 line-through font-medium">
                 {formatVND(food.original_price)}
               </div>
             )}
@@ -131,7 +131,7 @@ export default function FoodCard({ food, onOpenDetail }) {
             className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 shadow-md ${
               food.is_available
                 ? 'bg-gradient-to-tr from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 shadow-orange-500/20 active:scale-90 hover:scale-105 font-black'
-                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
             }`}
             title="Thêm vào giỏ hàng"
           >
