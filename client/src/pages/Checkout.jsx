@@ -136,7 +136,7 @@ export default function Checkout() {
     }
     setApplyingCoupon(true);
     try {
-      const res = await applyPromo(code);
+      const res = await applyPromo(code, customerPhone);
       if (res.success) {
         if (res.replaced) {
           showToast(`Đã đổi sang mã ${res.code} (thay thế mã ${res.previousCode} - Mỗi đơn áp dụng 1 mã)`, 'success', 5000);
@@ -231,6 +231,9 @@ export default function Checkout() {
           usePoints(pointsDiscountAmount);
         }
         clearCart();
+        try {
+          localStorage.removeItem('bepviet_lucky_voucher');
+        } catch (e) {}
 
         showToast('🎉 Đặt hàng thành công! Quán đang bắt đầu xử lý đơn của bạn.', 'success', 5000);
         navigate(`/order-success/${res.order.id}`, { state: { order: res.order } });

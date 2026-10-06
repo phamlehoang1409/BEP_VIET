@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
+const { saveCoupon, normalizePhone } = require('../services/couponService');
 
 const LUCKY_ROW_PHONE = 'STORE_LUCKY_WHEEL';
 
 // Winning prize pool (awarded prizes: 5k, 7k, 10%)
 const WINNING_PRIZES = [
-  { id: 1, label: 'Giảm 5.000₫', code: 'MAYMAN5K', sliceIndex: 1 },
-  { id: 2, label: 'Giảm 7.000₫', code: 'MAYMAN7K', sliceIndex: 2 },
-  { id: 3, label: 'Giảm 10%', code: 'MAYMAN10PT', sliceIndex: 3 },
-  { id: 4, label: 'Giảm 5.000₫', code: 'MAYMAN5K', sliceIndex: 4 },
-  { id: 5, label: 'Giảm 7.000₫', code: 'MAYMAN7K', sliceIndex: 5 },
+  { id: 1, label: 'Giảm 5.000₫', discount_type: 'fixed', discount_value: 5000, prefix: 'MM5K', sliceIndex: 1 },
+  { id: 2, label: 'Giảm 7.000₫', discount_type: 'fixed', discount_value: 7000, prefix: 'MM7K', sliceIndex: 2 },
+  { id: 3, label: 'Giảm 10%', discount_type: 'percent', discount_value: 10, max_discount: 25000, prefix: 'MM10PT', sliceIndex: 3 },
+  { id: 4, label: 'Giảm 5.000₫', discount_type: 'fixed', discount_value: 5000, prefix: 'MM5K', sliceIndex: 4 },
+  { id: 5, label: 'Giảm 7.000₫', discount_type: 'fixed', discount_value: 7000, prefix: 'MM7K', sliceIndex: 5 },
 ];
 
 const DEFAULT_LOSS_PRIZE = {
@@ -80,9 +81,10 @@ router.get('/status', async (req, res) => {
 });
 
 // POST spin
-// Rule: Auto "Chúc bạn may mắn lần sau". Only every 10th spin of all users awards a prize!
+// Rule: Only every 10th spin of all users awards a prize!
 router.post('/spin', async (req, res) => {
   try {
+    const { phone } = req.body || {};
     const state = await getWheelState();
     state.totalSpins = (state.totalSpins || 0) + 1;
 
@@ -93,15 +95,46 @@ router.post('/spin', async (req, res) => {
     if (isWinner) {
       // Pick a random prize from winning pool
       const pick = WINNING_PRIZES[Math.floor(Math.random() * WINNING_PRIZES.length)];
-      resultPrize = { ...pick };
+      
+      const cleanPhone = normalizePhone(phone);
+      const phoneSuffix = cleanPhone ? cleanPhone.slice(-4) : Math.floor(1000 + Math.random() * 9000);
+      const randomKey = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const uniqueCode = `${pick.prefix}-${phoneSuffix}-${randomKey}`;
+
+      // Create phone-bound single-use voucher
+      const uniqueCoupon = {
+        code: uniqueCode,
+        discount_type: pick.discount_type,
+        discount_value: pick.discount_value,
+        min_order: 0,
+        max_discount: pick.max_discount || null,
+        expiry_date: '2027-12-31',
+        description: `Voucher trúng thưởng riêng cho SĐT ${cleanPhone || 'VIP'} (${pick.label})`,
+        phone: cleanPhone || undefined,
+        is_single_use: true,
+        is_active: true,
+        created_at: new Date().toISOString()
+      };
+
+      await saveCoupon(uniqueCoupon);
+
+      resultPrize = {
+        id: pick.id,
+        label: pick.label,
+        code: uniqueCode,
+        sliceIndex: pick.sliceIndex,
+        phone: cleanPhone || null
+      };
+
       state.totalWins = (state.totalWins || 0) + 1;
       state.lastWinner = {
         prize: pick.label,
-        code: pick.code,
+        code: uniqueCode,
+        phone: cleanPhone ? cleanPhone.replace(/(\d{4})\d+(\d{2})/, '$1***$2') : 'Ẩn danh',
         time: new Date().toISOString()
       };
     } else {
-      // Always "Chúc bạn may mắn lần sau"
+      // "Chúc bạn may mắn lần sau"
       resultPrize = { ...DEFAULT_LOSS_PRIZE };
     }
 
@@ -113,7 +146,7 @@ router.post('/spin', async (req, res) => {
       prize: resultPrize,
       totalSpins: state.totalSpins,
       message: isWinner
-        ? `🎉 Chúc mừng bạn là người may mắn thứ ${state.totalSpins}! Bạn nhận được ${resultPrize.label}.`
+        ? `🎉 Chúc mừng bạn là người may mắn thứ ${state.totalSpins}! Bạn nhận được ${resultPrize.label}. Mã giảm giá riêng: ${resultPrize.code}.`
         : 'Chúc bạn may mắn lần sau! Hãy tiếp tục đặt hàng để nhận thêm lượt quay may mắn nhé.'
     });
   } catch (error) {

@@ -166,7 +166,7 @@ export function CartProvider({ children }) {
   };
 
   // Apply promo vouchers using backend validation (Strictly 1 coupon per order)
-  const applyPromo = async (code) => {
+  const applyPromo = async (code, phone = '') => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
       removePromo();
@@ -176,7 +176,7 @@ export function CartProvider({ children }) {
     const previousCode = promoCode;
 
     try {
-      const res = await validateCoupon(cleanCode, subtotal);
+      const res = await validateCoupon(cleanCode, subtotal, phone);
       if (res.success) {
         setPromoCode(cleanCode);
         setDiscount(res.discount_amount || 0);

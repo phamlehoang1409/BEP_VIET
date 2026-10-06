@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAdmin } = require('../middleware/authMiddleware');
+const { getCoupon, deleteCoupon, validateCouponForOrder } = require('../services/couponService');
 
 const VN_PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 
@@ -253,7 +254,19 @@ router.post('/', async (req, res) => {
       delivery_fee = 0;
     }
 
-    const total_amount = Math.max(0, subtotal - Number(discount) + delivery_fee);
+    // Validate and calculate discount strictly with phone verification
+    let appliedDiscount = Number(discount) || 0;
+    if (coupon_code && coupon_code.trim()) {
+      const cleanCoupon = coupon_code.trim().toUpperCase();
+      const valRes = await validateCouponForOrder(cleanCoupon, subtotal, normalizedPhone);
+      if (valRes.success) {
+        appliedDiscount = valRes.discount_amount;
+      } else {
+        return res.status(400).json({ error: valRes.error });
+      }
+    }
+
+    const total_amount = Math.max(0, subtotal - appliedDiscount + delivery_fee);
     const order_code = generateOrderCode();
 
     // Format full address including ward if present
@@ -329,6 +342,20 @@ router.post('/', async (req, res) => {
     }));
 
     await supabase.from('order_items').insert(orderItemsData);
+
+    // Delete single-use or phone-bound lucky voucher immediately so it cannot be reused
+    if (coupon_code && coupon_code.trim()) {
+      const cleanCoupon = coupon_code.trim().toUpperCase();
+      try {
+        const foundCoupon = await getCoupon(cleanCoupon);
+        if (foundCoupon && (foundCoupon.is_single_use || foundCoupon.phone || cleanCoupon.startsWith('MM') || cleanCoupon.startsWith('LUCKY'))) {
+          await deleteCoupon(cleanCoupon);
+          console.log(`[Order Route] 🗑️ Đã xóa vĩnh viễn mã giảm giá dùng 1 lần "${cleanCoupon}" sau khi số ${normalizedPhone} sử dụng thành công!`);
+        }
+      } catch (err) {
+        console.error('Lỗi khi xóa mã giảm giá đã dùng:', err.message);
+      }
+    }
 
     // Update sales_count asynchronously
     for (const it of validatedItems) {

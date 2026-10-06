@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { Gift, X, Sparkles, Trophy, Check, ArrowRight, ShoppingBag } from 'lucide-react';
+import { Gift, X, Sparkles, Trophy, Check, ArrowRight, ShoppingBag, Phone } from 'lucide-react';
 import { useToast } from './Toast';
+import { useAuth } from '../context/AuthContext';
 import { spinLuckyWheel, getLuckyWheelStatus } from '../api';
 
 const WHEEL_SLICES = [
@@ -16,14 +17,24 @@ const WHEEL_SLICES = [
 
 export default function LuckyWheelModal({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
+  const [userPhone, setUserPhone] = useState(
+    () => user?.phone || localStorage.getItem('bepviet_user_phone') || localStorage.getItem('bepviet_phone') || ''
+  );
   const [userSpins, setUserSpins] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
   const [globalStats, setGlobalStats] = useState(null);
+
+  useEffect(() => {
+    if (user?.phone && !userPhone) {
+      setUserPhone(user.phone);
+    }
+  }, [user]);
 
   // Sync available spins from localStorage whenever modal opens or receives update
   useEffect(() => {
@@ -62,6 +73,18 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
       return;
     }
 
+    const cleanPhone = (userPhone || '').trim();
+    if (!cleanPhone || cleanPhone.length < 9) {
+      showToast('Vui lòng nhập số điện thoại nhận thưởng trước khi quay!', 'error');
+      return;
+    }
+
+    // Save phone locally for future checkout
+    try {
+      localStorage.setItem('bepviet_user_phone', cleanPhone);
+      localStorage.setItem('bepviet_phone', cleanPhone);
+    } catch (e) {}
+
     setResult(null);
     setCopied(false);
     setSpinning(true);
@@ -74,7 +97,7 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
     } catch (e) {}
 
     try {
-      const spinRes = await spinLuckyWheel();
+      const spinRes = await spinLuckyWheel(cleanPhone);
       const prize = spinRes.prize || {
         id: 0,
         label: 'May Mắn Lần Sau',
@@ -103,13 +126,14 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
         if (spinRes.isWinner) {
           try {
             localStorage.setItem('bepviet_lucky_voucher', prize.code);
+            localStorage.setItem('bepviet_customer_phone', cleanPhone);
           } catch (e) {}
           confetti({
             particleCount: 90,
             spread: 75,
             origin: { y: 0.6 }
           });
-          showToast(`🎉 CHÚC MỪNG BẠN ĐÃ TRÚNG ${prize.label}!`, 'success', 6000);
+          showToast(`🎉 CHÚC MỪNG BẠN ĐÃ TRÚNG ${prize.label}! Mã riêng cho SĐT ${cleanPhone} đã được lưu.`, 'success', 6000);
         } else {
           showToast('Chúc bạn may mắn lần sau! Đặt hàng để nhận thêm lượt quay.', 'info', 4000);
         }
@@ -159,16 +183,32 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
           </p>
         </div>
 
-        {/* User Tickets Counter */}
-        <div className="flex items-center justify-center gap-2 my-2 py-1.5 px-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 max-w-xs mx-auto">
-          <span className="text-xs text-slate-300 font-semibold">Lượt quay của bạn:</span>
+        {/* User Tickets Counter & Phone Input */}
+        <div className="flex items-center justify-between gap-2 my-2 py-1.5 px-3 rounded-2xl bg-slate-800/80 border border-slate-700/60 max-w-xs mx-auto">
+          <span className="text-xs text-slate-300 font-semibold">Lượt quay:</span>
           <span
-            className={`font-black text-sm px-2 py-0.5 rounded-lg ${
+            className={`font-black text-sm px-2.5 py-0.5 rounded-lg ${
               userSpins > 0 ? 'bg-amber-400 text-slate-950 font-mono' : 'bg-slate-700 text-slate-400 font-mono'
             }`}
           >
             {userSpins} lượt
           </span>
+        </div>
+
+        {/* Customer Phone for exclusive coupon */}
+        <div className="mb-2 p-2.5 rounded-2xl bg-slate-800/60 border border-slate-700/50 max-w-xs mx-auto text-left">
+          <label className="block text-[10px] font-bold text-amber-300 uppercase mb-1 flex items-center gap-1">
+            <Phone className="w-3 h-3 text-amber-400" />
+            <span>SĐT nhận mã giảm riêng:</span>
+          </label>
+          <input
+            type="tel"
+            placeholder="Nhập SĐT (VD: 0912345678)"
+            value={userPhone}
+            onChange={(e) => setUserPhone(e.target.value)}
+            disabled={spinning}
+            className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-bold text-amber-300 outline-none focus:border-amber-400 font-mono placeholder:font-sans placeholder:text-slate-500"
+          />
         </div>
 
         {/* Wheel Graphic - Clickable for 1-tap spin */}
@@ -296,9 +336,10 @@ export default function LuckyWheelModal({ isOpen, onClose }) {
                     <span>{copied ? 'Đã Lưu!' : 'Sao Chép'}</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  Mã đã được lưu, sẽ tự áp dụng tại trang Đặt hàng & Thanh toán!
-                </p>
+                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 text-[10px] text-slate-300 text-left space-y-1">
+                  <p>🔒 <strong>Mã giảm riêng cho SĐT:</strong> <span className="text-amber-400 font-mono font-bold">{userPhone}</span></p>
+                  <p>⚡ <strong>Lưu ý:</strong> Mã áp dụng 1 lần duy nhất, sau khi đặt đơn thành công sẽ tự động hủy mã.</p>
+                </div>
               </div>
             ) : (
               <div className="bg-slate-800/80 border-slate-700/60 p-3 rounded-xl space-y-1.5">

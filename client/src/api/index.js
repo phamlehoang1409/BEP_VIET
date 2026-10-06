@@ -285,10 +285,10 @@ export const updateStoreSettings = (data) =>
 // --- Coupons API ---
 export const getCoupons = (params = {}) => request(`/coupons${buildQueryString(params)}`);
 
-export const validateCoupon = (code, subtotal) =>
+export const validateCoupon = (code, subtotal, phone) =>
   request('/coupons/validate', {
     method: 'POST',
-    body: JSON.stringify({ code, subtotal })
+    body: JSON.stringify({ code, subtotal, phone })
   });
 
 export const createCoupon = (data) =>
@@ -368,4 +368,12 @@ export const deleteReview = (id) => request(`/reviews/${id}`, { method: 'DELETE'
 
 // --- Lucky Wheel API ---
 export const getLuckyWheelStatus = () => request('/lucky-wheel/status');
-export const spinLuckyWheel = () => request('/lucky-wheel/spin', { method: 'POST' });
+export const spinLuckyWheel = (phoneOrData = {}) =>
+  request('/lucky-wheel/spin', {
+    method: 'POST',
+    body: JSON.stringify(
+      typeof phoneOrData === 'string'
+        ? { phone: phoneOrData }
+        : phoneOrData || {}
+    )
+  });
