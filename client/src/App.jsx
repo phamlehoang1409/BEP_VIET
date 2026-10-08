@@ -35,6 +35,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import FoodManagement from './pages/admin/FoodManagement';
 import OrderManagement from './pages/admin/OrderManagement';
+import InventoryManagement from './pages/admin/InventoryManagement';
 import CouponManagement from './pages/admin/CouponManagement';
 import ReviewManagement from './pages/admin/ReviewManagement';
 import AdminChat from './pages/admin/AdminChat';
@@ -247,6 +248,7 @@ export default function App() {
                           <Route index element={<Dashboard />} />
                           <Route path="foods" element={<FoodManagement />} />
                           <Route path="orders" element={<OrderManagement />} />
+                          <Route path="inventory" element={<InventoryManagement />} />
                           <Route path="coupons" element={<CouponManagement />} />
                           <Route path="reviews" element={<ReviewManagement />} />
                           <Route path="chat" element={<AdminChat />} />

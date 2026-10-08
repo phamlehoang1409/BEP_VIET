@@ -21,7 +21,8 @@ import {
   MapPin,
   ExternalLink,
   Star,
-  Printer
+  Printer,
+  Warehouse
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getSocket, getChatRooms, getAllOrders, confirmOrder, rejectOrder, getStoreSettings, updateStoreSettings } from '../../api';
@@ -231,6 +232,7 @@ export default function AdminLayout() {
     { to: '/admin', label: 'Bảng Điều Khiển', icon: LayoutDashboard, exact: true },
     { to: '/admin/foods', label: 'Quản Lý Món Ăn', icon: UtensilsCrossed },
     { to: '/admin/orders', label: 'Quản Lý Đơn Hàng', icon: Package, badge: pendingOrdersCount, badgeColor: 'bg-amber-500' },
+    { to: '/admin/inventory', label: 'Kho Nguyên Liệu', icon: Warehouse },
     { to: '/admin/coupons', label: 'Mã Khuyến Mãi', icon: Tag },
     { to: '/admin/reviews', label: 'Đánh Giá', icon: Star },
     { to: '/admin/chat', label: 'Hỗ Trợ Khách Hàng', icon: MessageSquare, badge: adminUnreadTotal, badgeColor: 'bg-red-500' }

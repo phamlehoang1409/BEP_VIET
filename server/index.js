@@ -15,6 +15,7 @@ const couponsRoutes = require('./routes/coupons');
 const reviewsRoutes = require('./routes/reviews');
 const luckyWheelRoutes = require('./routes/luckyWheel');
 const chatbotRoutes = require('./routes/chatbot');
+const inventoryRoutes = require('./routes/inventory');
 const setupChatSocket = require('./socket/chatSocket');
 const supabase = require('./db/supabase');
 
@@ -51,6 +52,7 @@ app.use('/api/coupons', couponsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/lucky-wheel', luckyWheelRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

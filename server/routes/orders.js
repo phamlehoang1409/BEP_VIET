@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../db/supabase');
 const { requireAdmin } = require('../middleware/authMiddleware');
 const { getCoupon, deleteCoupon, validateCouponForOrder } = require('../services/couponService');
+const inventoryService = require('../services/inventoryService');
 
 const VN_PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 
@@ -366,6 +367,13 @@ router.post('/', async (req, res) => {
         }
       } catch (e) {}
     }
+
+    // Deduct raw ingredients from inventory asynchronously
+    try {
+      inventoryService.deductStockForOrder(order.order_code, validatedItems).catch(err => {
+        console.error('Lỗi trừ kho nguyên liệu:', err.message);
+      });
+    } catch (e) {}
 
     // Emit socket event if io is available
     const io = req.app.get('io');

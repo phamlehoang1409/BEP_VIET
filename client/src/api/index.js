@@ -385,3 +385,34 @@ export const sendChatbotMessage = (message, history = []) =>
     body: JSON.stringify({ message, history })
   });
 
+// --- Inventory & Recipe API ---
+export const getInventorySummary = () => request('/inventory/summary');
+export const getIngredients = () => request('/inventory/ingredients');
+export const addIngredient = (data) =>
+  request('/inventory/ingredients', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+export const updateIngredient = (id, data) =>
+  request(`/inventory/ingredients/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+export const restockIngredient = (id, quantity, note = '') =>
+  request(`/inventory/ingredients/${id}/restock`, {
+    method: 'POST',
+    body: JSON.stringify({ quantity, note })
+  });
+export const deleteIngredient = (id) =>
+  request(`/inventory/ingredients/${id}`, {
+    method: 'DELETE'
+  });
+export const getRecipes = () => request('/inventory/recipes');
+export const saveRecipe = (food_name, ingredients_required) =>
+  request('/inventory/recipes', {
+    method: 'POST',
+    body: JSON.stringify({ food_name, ingredients_required })
+  });
+export const getInventoryLogs = () => request('/inventory/logs');
+
+
