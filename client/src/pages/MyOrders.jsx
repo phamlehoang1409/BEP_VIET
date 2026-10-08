@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star, CheckCircle2, RotateCw } from 'lucide-react';
-import { getCustomerOrders, getSocket, cancelOrder, submitReview, getReviews } from '../api';
+import { Package, Clock, Phone, ChevronRight, MessageCircle, RefreshCw, XCircle, Star, CheckCircle2, RotateCw, Sparkles } from 'lucide-react';
+import { getCustomerOrders, getSocket, cancelOrder, getReviews } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useCart } from '../context/CartContext';
 import { formatVND } from '../utils/vietnamData';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
+import ReviewModal from '../components/ReviewModal';
 import { awardSpinForCompletedOrder } from '../utils/luckyWheelService';
 
 export default function MyOrders() {
@@ -18,9 +19,6 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(false);
   const [searchPhone, setSearchPhone] = useState(user?.phone || '');
   const [reviewingOrder, setReviewingOrder] = useState(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewedOrderIds, setReviewedOrderIds] = useState(new Set());
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
   const [cancelling, setCancelling] = useState(false);
@@ -96,7 +94,7 @@ export default function MyOrders() {
     return () => socket.off('order_status_updated', handleStatusUpdate);
   }, []);
 
-  // Fetch already reviewed order IDs to ensure each order is reviewed at most once
+  // Fetch already reviewed order IDs
   useEffect(() => {
     getReviews()
       .then((res) => {
@@ -121,19 +119,19 @@ export default function MyOrders() {
   const getStatusBadge = (status, note) => {
     switch (status) {
       case 'pending':
-        return <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">Chờ xác nhận</span>;
+        return <span className="bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-200 dark:border-amber-500/30">Chờ xác nhận</span>;
       case 'confirmed':
-        return <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">Đã xác nhận</span>;
+        return <span className="bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 px-3 py-1 rounded-full text-xs font-bold border border-teal-200 dark:border-teal-500/30">Đã xác nhận</span>;
       case 'preparing':
-        return <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold">Đang nấu nóng</span>;
+        return <span className="bg-orange-100 dark:bg-orange-500/20 text-orange-800 dark:text-orange-300 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-500/30">Đang nấu nóng</span>;
       case 'delivering':
-        return <span className="bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-bold">Đang giao tới</span>;
+        return <span className="bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 px-3 py-1 rounded-full text-xs font-bold border border-sky-200 dark:border-sky-500/30">Đang giao tới</span>;
       case 'completed':
-        return <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">Giao thành công</span>;
+        return <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200 dark:border-emerald-500/30">Giao thành công</span>;
       case 'cancelled':
         return note?.includes('[Quán từ chối:')
-          ? <span className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold">Quán từ chối</span>
-          : <span className="bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold">Đã hủy đơn</span>;
+          ? <span className="bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 px-3 py-1 rounded-full text-xs font-bold border border-rose-200 dark:border-rose-500/30">Quán từ chối</span>
+          : <span className="bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 px-3 py-1 rounded-full text-xs font-bold border border-rose-200 dark:border-rose-500/30">Đã hủy đơn</span>;
       default:
         return <span className="bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-bold">{status}</span>;
     }
@@ -147,7 +145,7 @@ export default function MyOrders() {
             Đơn Hàng Của Tôi
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Theo dõi trạng thái giao hàng và xem lại các món ăn đã đặt
+            Theo dõi trạng thái giao hàng, đánh giá món ăn nhận Bếp Xu & đặt lại 1 chạm
           </p>
         </div>
 
@@ -259,6 +257,7 @@ export default function MyOrders() {
                         <img
                           src={item.food_image}
                           alt={item.food_name}
+                          referrerPolicy="no-referrer"
                           className="w-10 h-10 rounded-xl object-cover border border-slate-100 dark:border-slate-700"
                         />
                       )}
@@ -273,10 +272,10 @@ export default function MyOrders() {
               </div>
 
               {/* Total & Action */}
-              <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <span className="text-xs text-slate-400 block">Tổng thanh toán ({order.payment_method})</span>
-                  <span className="text-base font-black text-orange-600">
+                  <span className="text-base font-black text-amber-600 dark:text-amber-400">
                     {formatVND(order.total_amount)}
                   </span>
                   {order.status === 'completed' && (
@@ -302,7 +301,7 @@ export default function MyOrders() {
                   {(order.status === 'pending' || order.status === 'confirmed') && (
                     <button
                       onClick={() => setCancellingOrderId(order.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition active:scale-95"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition active:scale-95 border border-rose-200 dark:border-rose-900/40"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Hủy đơn</span>
@@ -310,7 +309,7 @@ export default function MyOrders() {
                   )}
                   <button
                     onClick={() => setIsChatOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 text-xs font-bold transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 hover:bg-orange-100 text-xs font-bold transition border border-orange-200 dark:border-orange-900/40"
                   >
                     <MessageCircle className="w-3.5 h-3.5" />
                     <span>Hỏi quán</span>
@@ -318,17 +317,17 @@ export default function MyOrders() {
 
                   {order.status === 'completed' && (
                     reviewedOrderIds.has(String(order.order_code || '').trim()) || reviewedOrderIds.has(String(order.id || '').trim()) ? (
-                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-300/80 text-xs font-bold select-none">
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-300/80 dark:border-amber-500/30 text-xs font-bold select-none">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         <span>Đã đánh giá</span>
                       </span>
                     ) : (
                       <button
-                        onClick={() => { setReviewingOrder(order); setRating(5); setComment(''); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-bold transition"
+                        onClick={() => setReviewingOrder(order)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 text-xs font-bold transition border border-emerald-200 dark:border-emerald-500/30"
                       >
                         <Star className="w-3.5 h-3.5 fill-current" />
-                        <span>Đánh giá</span>
+                        <span>Đánh giá ⭐</span>
                       </button>
                     )
                   )}
@@ -350,81 +349,20 @@ export default function MyOrders() {
 
       {/* Review Modal */}
       {reviewingOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-2xl animate-scale-up">
-            <div className="text-center space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                Đánh giá 1 lần duy nhất
-              </span>
-              <h3 className="font-black text-lg text-slate-900">Đánh Giá Món Ăn</h3>
-              <p className="text-xs text-slate-500">Mã đơn: {reviewingOrder.order_code}</p>
-            </div>
-
-            <div className="flex justify-center gap-2 py-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  type="button"
-                  key={star}
-                  onClick={() => setRating(star)}
-                  className="hover:scale-110 active:scale-95 transition"
-                >
-                  <Star className={`w-8 h-8 ${rating >= star ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'}`} />
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              placeholder="Chia sẻ cảm nhận của Quý khách về chất lượng món mì & dịch vụ..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              className="w-full p-3.5 rounded-2xl border border-slate-200 text-xs text-slate-800 placeholder-slate-400 h-24 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
-            />
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setReviewingOrder(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                disabled={submittingReview}
-                onClick={async () => {
-                  setSubmittingReview(true);
-                  try {
-                    const orderCode = reviewingOrder.order_code || `ORD-${reviewingOrder.id}`;
-                    const res = await submitReview({
-                      order_id: orderCode,
-                      customer_name: reviewingOrder.customer_name,
-                      customer_phone: reviewingOrder.customer_phone,
-                      rating,
-                      comment
-                    });
-                    if (res.success) {
-                      showToast(res.message || 'Cảm ơn Quý khách đã gửi đánh giá món ăn!', 'success');
-                      setReviewedOrderIds((prev) => {
-                        const next = new Set(prev);
-                        if (reviewingOrder.order_code) next.add(String(reviewingOrder.order_code).trim());
-                        if (reviewingOrder.id) next.add(String(reviewingOrder.id).trim());
-                        return next;
-                      });
-                      setReviewingOrder(null);
-                    }
-                  } catch (e) {
-                    showToast(e.message || 'Không thể gửi đánh giá', 'error');
-                  } finally {
-                    setSubmittingReview(false);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs shadow-md transition disabled:opacity-50"
-              >
-                {submittingReview ? 'Đang gửi...' : 'Gửi Đánh Giá'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReviewModal
+          isOpen={!!reviewingOrder}
+          order={reviewingOrder}
+          onClose={() => setReviewingOrder(null)}
+          onSuccess={() => {
+            setReviewedOrderIds((prev) => {
+              const next = new Set(prev);
+              if (reviewingOrder.order_code) next.add(String(reviewingOrder.order_code).trim());
+              if (reviewingOrder.id) next.add(String(reviewingOrder.id).trim());
+              return next;
+            });
+            setReviewingOrder(null);
+          }}
+        />
       )}
 
       {/* Confirm Cancel Modal */}

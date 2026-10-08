@@ -1,12 +1,26 @@
 import React from 'react';
-import { Plus, Star, Clock, Flame, Sparkles } from 'lucide-react';
+import { Plus, Star, Clock, Flame, Sparkles, Heart } from 'lucide-react';
 import { formatVND } from '../utils/vietnamData';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { useToast } from './Toast';
 
 export default function FoodCard({ food, onOpenDetail }) {
   const { addToCart, storeSettings, showStoreClosedModal } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { showToast } = useToast();
+
+  const isFav = isFavorite(food.id);
+
+  const handleToggleFavorite = (e) => {
+    e.stopPropagation();
+    const added = toggleFavorite(food);
+    if (added) {
+      showToast(`Đã thêm "${food.name}" vào danh sách yêu thích! ❤️`, 'success');
+    } else {
+      showToast(`Đã bỏ "${food.name}" khỏi danh sách yêu thích.`, 'info');
+    }
+  };
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
@@ -48,8 +62,8 @@ export default function FoodCard({ food, onOpenDetail }) {
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
 
-        {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1 pointer-events-none">
+        {/* Top Badges & Favorite Heart */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1 z-10">
           <div className="flex items-center gap-1.5 flex-wrap">
             {hasDiscount && (
               <span className="bg-gradient-to-r from-rose-600 to-red-500 text-white text-[11px] font-black px-2.5 py-1 rounded-xl shadow-md animate-pulse">
@@ -63,10 +77,26 @@ export default function FoodCard({ food, onOpenDetail }) {
             )}
           </div>
 
-          {/* Rating Badge */}
-          <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-xl flex items-center gap-1 shadow-sm text-xs font-black text-slate-900 dark:text-amber-300 border border-slate-100 dark:border-slate-800">
-            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            <span>{food.rating ? food.rating.toFixed(1) : '5.0'}</span>
+          <div className="flex items-center gap-1.5">
+            {/* Rating Badge */}
+            <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-2 py-1 rounded-xl flex items-center gap-1 shadow-sm text-xs font-black text-slate-900 dark:text-amber-300 border border-slate-100 dark:border-slate-800">
+              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>{food.rating ? food.rating.toFixed(1) : '5.0'}</span>
+            </div>
+
+            {/* Favorite Button */}
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-md transition-transform active:scale-75 shadow-sm ${
+                isFav
+                  ? 'bg-rose-500 text-white shadow-rose-500/30 scale-105'
+                  : 'bg-white/90 dark:bg-slate-900/90 text-slate-400 hover:text-rose-500 border border-slate-100 dark:border-slate-800'
+              }`}
+              title={isFav ? 'Bỏ thích' : 'Yêu thích món này'}
+            >
+              <Heart className={`w-4 h-4 ${isFav ? 'fill-white stroke-white' : ''}`} />
+            </button>
           </div>
         </div>
 

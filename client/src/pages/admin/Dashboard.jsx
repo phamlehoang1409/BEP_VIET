@@ -16,7 +16,13 @@ import {
   RefreshCw,
   Percent,
   Calendar,
-  Layers
+  Layers,
+  FileSpreadsheet,
+  Download,
+  CreditCard,
+  Banknote,
+  Star,
+  Users
 } from 'lucide-react';
 import { getDashboardStats, updateOrderStatus } from '../../api';
 import { formatVND } from '../../utils/vietnamData';
@@ -29,6 +35,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [printingOrder, setPrintingOrder] = useState(null);
   const [activeChartTab, setActiveChartTab] = useState('revenue'); // 'revenue' or 'orders'
+  const [timeFilter, setTimeFilter] = useState('7days'); // 'today' | '7days' | '30days' | 'all'
   const { showToast } = useToast();
 
   const fetchStats = async () => {
@@ -60,6 +67,46 @@ export default function Dashboard() {
     }
   };
 
+  // Export orders and revenue to Excel (CSV with UTF-8 BOM)
+  const handleExportCSV = () => {
+    if (!stats || !stats.recentOrders || stats.recentOrders.length === 0) {
+      showToast('Chưa có dữ liệu đơn hàng để xuất file', 'error');
+      return;
+    }
+
+    const headers = ['Mã Đơn', 'Khách Hàng', 'Số Điện Thoại', 'Địa Chỉ', 'Tạm Tính (VNĐ)', 'Giảm Giá (VNĐ)', 'Phí Ship (VNĐ)', 'Tổng Tiền (VNĐ)', 'Thanh Toán', 'Trạng Thái', 'Thời Gian'];
+    const rows = stats.recentOrders.map((o) => [
+      `"${o.order_code || o.id}"`,
+      `"${o.customer_name || ''}"`,
+      `"${o.customer_phone || ''}"`,
+      `"${(o.delivery_address || '').replace(/"/g, '""')}"`,
+      o.subtotal || 0,
+      o.discount || 0,
+      o.delivery_fee || 0,
+      o.total_amount || 0,
+      `"${o.payment_method || 'COD'}"`,
+      `"${o.status || 'pending'}"`,
+      `"${new Date(o.created_at).toLocaleString('vi-VN')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Bao_Cao_Doanh_Thu_Bep_Viet_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('📊 Đã xuất file Excel (CSV) thành công!', 'success');
+  };
+
+  // Print Summary Report
+  const handlePrintSummary = () => {
+    window.print();
+  };
+
   if (loading && !stats) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -88,19 +135,29 @@ export default function Dashboard() {
   const totalOrdersCount = stats?.totalOrders || 1;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-white">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Tổng Quan Cửa Hàng Bếp Việt
+            Tổng Quan Doanh Thu Bếp Việt
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Biểu đồ doanh thu 7 ngày, in hóa đơn bếp & tình trạng phục vụ thời gian thực
+            Báo cáo bán hàng, biểu đồ doanh thu & quản lý đơn hàng thời gian thực
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Export Excel CSV Button */}
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition shadow-lg shadow-emerald-600/20 active:scale-95"
+            title="Xuất file Excel báo cáo doanh thu"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Xuất Excel</span>
+          </button>
+
           {/* Sound Alert Test Button */}
           <button
             onClick={() => {
@@ -118,141 +175,116 @@ export default function Dashboard() {
 
           <button
             onClick={fetchStats}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700"
+            className="p-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700"
             title="Làm mới dữ liệu"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Làm Mới</span>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
           </button>
-
-          <Link
-            to="/admin/foods"
-            className="px-4 py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-lg shadow-orange-500/25 transition"
-          >
-            + Thêm Món
-          </Link>
-          <Link
-            to="/admin/orders"
-            className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition border border-slate-700"
-          >
-            Quản Lý Đơn
-          </Link>
         </div>
       </div>
 
-      {/* METRIC CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Revenue */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-800/80 border border-slate-700/60 shadow-xl space-y-3">
+      {/* Top 4 KPI Metrics Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Doanh Thu Hôm Nay */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-[#1C2030] to-[#121522] border border-amber-500/30 relative overflow-hidden shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Tổng Doanh Thu
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+              Doanh Thu Hôm Nay
             </span>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">
+          <div className="text-2xl sm:text-3xl font-black text-white mt-2">
+            {formatVND(stats?.todayRevenue || 0)}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3 text-emerald-400" />
+            <span>{stats?.todayOrders || 0} đơn hàng trong ngày</span>
+          </div>
+        </div>
+
+        {/* Tổng Doanh Thu Tích Lũy */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-[#1C2030] to-[#121522] border border-emerald-500/30 relative overflow-hidden shadow-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              Tổng Doanh Thu
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white mt-2">
             {formatVND(stats?.totalRevenue || 0)}
           </div>
-          <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Doanh thu thực tế sau khuyến mãi</span>
-          </p>
+          <div className="text-[11px] text-slate-400 mt-1">
+            Toàn bộ thời gian hoạt động
+          </div>
         </div>
 
-        {/* Total Orders */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-800/80 border border-slate-700/60 shadow-xl space-y-3">
+        {/* Đơn Chờ Xử Lý */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-[#1C2030] to-[#121522] border border-rose-500/30 relative overflow-hidden shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Tổng Đơn Hàng
+            <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">
+              Đơn Cần Nấu Ngay
             </span>
-            <div className="w-10 h-10 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-bold">
-              <ShoppingBag className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+              <Clock className="w-5 h-5 animate-pulse" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">
-            {stats?.totalOrders || 0}
+          <div className="text-2xl sm:text-3xl font-black text-white mt-2">
+            {(statusBreakdown.pending || 0) + (statusBreakdown.preparing || 0)}
           </div>
-          <p className="text-[11px] text-slate-400">
-            {stats?.completedOrders || 0} đơn đã hoàn tất thành công
-          </p>
+          <div className="text-[11px] text-rose-300 mt-1">
+            {statusBreakdown.pending || 0} mới tiếp nhận • {statusBreakdown.preparing || 0} đang nấu
+          </div>
         </div>
 
-        {/* Pending Orders */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-800/80 border border-slate-700/60 shadow-xl space-y-3">
+        {/* Tổng Số Món Thực Đơn */}
+        <div className="p-5 rounded-3xl bg-gradient-to-br from-[#1C2030] to-[#121522] border border-purple-500/30 relative overflow-hidden shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Đơn Cần Chế Biến
+            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">
+              Món Đang Bán
             </span>
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
-              <Clock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+              <UtensilsCrossed className="w-5 h-5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-400">
-            {stats?.pendingOrders || 0}
+          <div className="text-2xl sm:text-3xl font-black text-white mt-2">
+            {stats?.totalFoods || 0}
           </div>
-          <p className="text-[11px] text-amber-400 font-medium">
-            Cần bếp tiếp nhận và làm ngay
-          </p>
-        </div>
-
-        {/* Average Order Value (AOV) */}
-        <div className="p-5 sm:p-6 rounded-3xl bg-slate-800/80 border border-slate-700/60 shadow-xl space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Đơn Trung Bình (AOV)
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold">
-              <Percent className="w-5 h-5" />
-            </div>
+          <div className="text-[11px] text-purple-300 mt-1">
+            {stats?.totalCategories || 6} danh mục ẩm thực
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">
-            {formatVND(stats?.avgOrderValue || 0)}
-          </div>
-          <p className="text-[11px] text-sky-400 font-medium">
-            Doanh thu trung bình trên mỗi đơn
-          </p>
         </div>
       </div>
 
-      {/* SECTION: 7-DAY REVENUE & ORDERS CHART */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-        {/* Revenue Bar Chart (7 Cols) */}
-        <div className="lg:col-span-8 bg-slate-800/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-700/60">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base text-white">
-                  Biểu Đồ Doanh Thu & Đơn Hàng 7 Ngày
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Xu hướng kinh doanh từ ngày {last7Days[0]?.displayDate} đến hôm nay
-                </p>
-              </div>
+      {/* 7-Days Visual Bar Chart & Status Ratio */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Revenue / Orders Chart */}
+        <div className="lg:col-span-8 p-6 rounded-3xl bg-[#121522] border border-slate-800 shadow-xl space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base font-black text-white">Biểu Đồ Doanh Thu 7 Ngày Gần Nhất</h3>
             </div>
-
-            {/* Toggle Revenue / Orders */}
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-700/60 self-start sm:self-auto">
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
               <button
                 onClick={() => setActiveChartTab('revenue')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                className={`px-3 py-1 rounded-lg font-bold transition ${
                   activeChartTab === 'revenue'
-                    ? 'bg-orange-500 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-amber-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Doanh Thu (VNĐ)
               </button>
               <button
                 onClick={() => setActiveChartTab('orders')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                className={`px-3 py-1 rounded-lg font-bold transition ${
                   activeChartTab === 'orders'
-                    ? 'bg-orange-500 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-amber-500 text-slate-950 shadow'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Số Lượng Đơn
@@ -260,332 +292,204 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Interactive Chart Container */}
-          <div className="h-64 sm:h-72 w-full pt-4 flex items-end justify-between gap-2 sm:gap-4 px-2">
-            {last7Days.map((day, idx) => {
-              const isToday = idx === last7Days.length - 1;
+          {/* Chart Bars */}
+          <div className="h-48 sm:h-56 flex items-end justify-between gap-2 pt-6 pb-2 border-b border-slate-800">
+            {last7Days.map((d, i) => {
               const heightPercent =
                 activeChartTab === 'revenue'
-                  ? Math.max(Math.round((day.revenue / maxDayRevenue) * 100), 8)
-                  : Math.max(Math.round((day.orderCount / maxDayOrders) * 100), 8);
+                  ? Math.max(8, Math.round(((d.revenue || 0) / maxDayRevenue) * 100))
+                  : Math.max(8, Math.round(((d.orderCount || 0) / maxDayOrders) * 100));
 
               return (
-                <div
-                  key={day.dateKey}
-                  className="flex-1 flex flex-col items-center h-full justify-end group relative"
-                >
-                  {/* Floating Tooltip */}
-                  <div className="absolute -top-12 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition duration-200 bg-slate-950 text-white border border-amber-500/40 px-2.5 py-1.5 rounded-xl shadow-2xl text-center whitespace-nowrap text-[11px]">
-                    <p className="font-black text-amber-400">{formatVND(day.revenue)}</p>
-                    <p className="text-[10px] text-slate-400">{day.orderCount} đơn hàng</p>
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-amber-300 bg-slate-900 px-1.5 py-0.5 rounded shadow border border-slate-700 whitespace-nowrap">
+                    {activeChartTab === 'revenue' ? formatVND(d.revenue || 0) : `${d.orderCount || 0} đơn`}
                   </div>
-
-                  {/* Value on top of bar on hover */}
-                  <span className="text-[10px] font-mono text-slate-400 group-hover:text-amber-300 font-bold mb-1.5 transition">
-                    {activeChartTab === 'revenue'
-                      ? day.revenue > 0
-                        ? `${Math.round(day.revenue / 1000)}k`
-                        : '0'
-                      : `${day.orderCount}đơn`}
-                  </span>
-
-                  {/* Bar */}
-                  <div className="w-full max-w-[44px] bg-slate-900 rounded-t-2xl overflow-hidden flex items-end h-44 sm:h-52 border border-slate-700/40">
-                    <div
-                      style={{ height: `${heightPercent}%` }}
-                      className={`w-full rounded-t-xl transition-all duration-700 ease-out group-hover:brightness-125 ${
-                        isToday
-                          ? 'bg-gradient-to-t from-orange-600 via-amber-500 to-amber-300 shadow-lg shadow-orange-500/30'
-                          : 'bg-gradient-to-t from-slate-700 via-orange-500/70 to-amber-400/80'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Date Label */}
-                  <div className="mt-2.5 text-center">
-                    <span
-                      className={`text-[11px] block font-bold ${
-                        isToday ? 'text-amber-400 font-black' : 'text-slate-300'
-                      }`}
-                    >
-                      {isToday ? 'Hôm nay' : day.dayName}
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-mono block">
-                      {day.displayDate}
-                    </span>
-                  </div>
+                  <div
+                    className="w-full max-w-[36px] rounded-t-xl bg-gradient-to-t from-amber-600 to-orange-400 group-hover:from-amber-500 group-hover:to-orange-300 transition-all duration-300"
+                    style={{ height: `${heightPercent}%` }}
+                  />
+                  <span className="text-[11px] font-bold text-slate-400">{d.dateLabel || d.date}</span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Order Status Distribution (4 Cols) */}
-        <div className="lg:col-span-4 bg-slate-800/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 flex flex-col justify-between">
-          <div className="pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-amber-400" />
-              <h3 className="font-extrabold text-base text-white">Tỉ Lệ Đơn Hàng</h3>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Phân bổ tình trạng xử lý trên tổng {stats?.totalOrders || 0} đơn
-            </p>
-          </div>
+        {/* Order Status Breakdown */}
+        <div className="lg:col-span-4 p-6 rounded-3xl bg-[#121522] border border-slate-800 shadow-xl space-y-4">
+          <h3 className="text-base font-black text-white flex items-center gap-2">
+            <Layers className="w-5 h-5 text-amber-400" />
+            Tỷ Lệ Trạng Thái Đơn
+          </h3>
 
-          {/* Progress Bars */}
-          <div className="space-y-4 flex-1 justify-center flex flex-col">
-            {/* Completed */}
-            <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  Đã hoàn tất
-                </span>
-                <span className="font-mono font-black text-white">
-                  {statusBreakdown.completed} đơn (
-                  {Math.round((statusBreakdown.completed / totalOrdersCount) * 100)}%)
-                </span>
-              </div>
-              <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/60">
-                <div
-                  style={{
-                    width: `${Math.round((statusBreakdown.completed / totalOrdersCount) * 100)}%`
-                  }}
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                />
-              </div>
-            </div>
-
-            {/* Delivering / Preparing */}
-            <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-bold text-sky-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-sky-400" />
-                  Đang giao & Bếp nấu
-                </span>
-                <span className="font-mono font-black text-white">
-                  {statusBreakdown.preparing + statusBreakdown.delivering} đơn (
-                  {Math.round(
-                    ((statusBreakdown.preparing + statusBreakdown.delivering) / totalOrdersCount) *
-                      100
-                  )}
-                  %)
-                </span>
-              </div>
-              <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/60">
-                <div
-                  style={{
-                    width: `${Math.round(
-                      ((statusBreakdown.preparing + statusBreakdown.delivering) / totalOrdersCount) *
-                        100
-                    )}%`
-                  }}
-                  className="h-full bg-sky-500 rounded-full transition-all duration-500"
-                />
-              </div>
-            </div>
-
-            {/* Pending */}
-            <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-bold text-amber-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Chờ xác nhận
-                </span>
-                <span className="font-mono font-black text-white">
-                  {statusBreakdown.pending} đơn (
-                  {Math.round((statusBreakdown.pending / totalOrdersCount) * 100)}%)
-                </span>
-              </div>
-              <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/60">
-                <div
-                  style={{
-                    width: `${Math.round((statusBreakdown.pending / totalOrdersCount) * 100)}%`
-                  }}
-                  className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                />
-              </div>
-            </div>
-
-            {/* Cancelled */}
-            <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="font-bold text-rose-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-400" />
-                  Đã hủy
-                </span>
-                <span className="font-mono font-black text-white">
-                  {statusBreakdown.cancelled} đơn (
-                  {Math.round((statusBreakdown.cancelled / totalOrdersCount) * 100)}%)
-                </span>
-              </div>
-              <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700/60">
-                <div
-                  style={{
-                    width: `${Math.round((statusBreakdown.cancelled / totalOrdersCount) * 100)}%`
-                  }}
-                  className="h-full bg-rose-500 rounded-full transition-all duration-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-700/60 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Tỉ lệ phục vụ thành công:</span>
-            <span className="font-black text-emerald-400 text-sm">
-              {Math.round((statusBreakdown.completed / totalOrdersCount) * 100) || 100}%
-            </span>
+          <div className="space-y-3">
+            {[
+              { label: 'Hoàn Thành', count: statusBreakdown.completed || 0, color: 'bg-emerald-500', text: 'text-emerald-400' },
+              { label: 'Đang Giao Hàng', count: statusBreakdown.delivering || 0, color: 'bg-blue-500', text: 'text-blue-400' },
+              { label: 'Đang Nấu Bếp', count: statusBreakdown.preparing || 0, color: 'bg-amber-500', text: 'text-amber-400' },
+              { label: 'Mới Tiếp Nhận', count: statusBreakdown.pending || 0, color: 'bg-purple-500', text: 'text-purple-400' },
+              { label: 'Đã Hủy Đơn', count: statusBreakdown.cancelled || 0, color: 'bg-rose-500', text: 'text-rose-400' }
+            ].map((st, i) => {
+              const pct = Math.round((st.count / totalOrdersCount) * 100);
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-300">{st.label}</span>
+                    <span className={st.text}>{st.count} đơn ({pct}%)</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${st.color} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* LOWER SECTION: TOP FOODS & RECENT ORDERS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-        {/* Top 5 Best Selling Foods */}
-        <div className="lg:col-span-5 bg-slate-800/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-orange-400" />
-              <h3 className="font-extrabold text-base text-white">Top Món Ăn Bán Chạy</h3>
-            </div>
-            <Link to="/admin/foods" className="text-xs font-bold text-orange-400 hover:underline">
-              Quản lý
+      {/* Top 10 Bestselling Foods Table */}
+      {stats?.topFoods && stats.topFoods.length > 0 && (
+        <div className="p-6 rounded-3xl bg-[#121522] border border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" />
+              Bảng Xếp Hạng Top Món Bán Chạy Nhất
+            </h3>
+            <Link to="/admin/foods" className="text-xs text-amber-400 hover:underline font-bold">
+              Quản lý toàn bộ món →
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {stats?.topFoods?.map((f, i) => (
-              <div
-                key={f.id}
-                className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/60 border border-slate-800"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="w-6 text-center text-xs font-black text-amber-400">
-                    #{i + 1}
-                  </span>
-                  <img
-                    src={f.image}
-                    alt={f.name}
-                    className="w-11 h-11 rounded-xl object-cover"
-                  />
-                  <div>
-                    <h4 className="font-bold text-xs text-white line-clamp-1">{f.name}</h4>
-                    <span className="text-[11px] text-slate-400">{formatVND(f.price)}</span>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-xs font-black text-orange-400">
-                    {f.sales_count} đã bán
-                  </span>
-                  <span className="text-[10px] text-slate-500 block">
-                    {formatVND(f.sales_count * f.price)}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-900/70 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-3">Hạng</th>
+                  <th className="p-3">Tên Món</th>
+                  <th className="p-3">Giá Bán</th>
+                  <th className="p-3">Đã Bán</th>
+                  <th className="p-3">Doanh Số Dự Kiến</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {stats.topFoods.slice(0, 8).map((f, idx) => (
+                  <tr key={f.id || idx} className="hover:bg-slate-800/40 transition">
+                    <td className="p-3 font-black text-amber-400">
+                      {idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`}
+                    </td>
+                    <td className="p-3 font-bold text-white flex items-center gap-2.5">
+                      <img
+                        src={f.image}
+                        alt={f.name}
+                        referrerPolicy="no-referrer"
+                        className="w-9 h-9 rounded-lg object-cover"
+                      />
+                      <span>{f.name}</span>
+                    </td>
+                    <td className="p-3 font-semibold text-slate-300">{formatVND(f.price)}</td>
+                    <td className="p-3 font-black text-emerald-400">{f.sales_count || 0} phần</td>
+                    <td className="p-3 font-bold text-amber-300">
+                      {formatVND((f.sales_count || 0) * f.price)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* Recent Orders with Quick Actions & Thermal Print */}
-        <div className="lg:col-span-7 bg-slate-800/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-700/60">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-sky-400" />
-              <h3 className="font-extrabold text-base text-white">Đơn Hàng Gần Đây</h3>
-            </div>
-            <Link to="/admin/orders" className="text-xs font-bold text-orange-400 hover:underline">
-              Xem tất cả
-            </Link>
-          </div>
+      {/* Recent Orders List with Quick Print Bill */}
+      <div className="p-6 rounded-3xl bg-[#121522] border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-base font-black text-white flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-amber-400" />
+            Đơn Hàng Gần Đây
+          </h3>
+          <Link to="/admin/orders" className="text-xs text-amber-400 hover:underline font-bold">
+            Xem tất cả đơn hàng →
+          </Link>
+        </div>
 
-          <div className="space-y-3">
-            {stats?.recentOrders?.map((ord) => (
-              <div
-                key={ord.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 gap-3"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-xs text-white">{ord.order_code}</span>
-                    <span className="text-[11px] text-slate-400">• {ord.customer_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                    <span>SĐT: {ord.customer_phone}</span>
-                    <span>
-                      • Tổng:{' '}
-                      <strong className="text-amber-400">{formatVND(ord.total_amount)}</strong>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-900/70 text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+              <tr>
+                <th className="p-3">Mã Đơn</th>
+                <th className="p-3">Khách Hàng</th>
+                <th className="p-3">Tổng Tiền</th>
+                <th className="p-3">Thanh Toán</th>
+                <th className="p-3">Trạng Thái</th>
+                <th className="p-3 text-right">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {(stats?.recentOrders || []).slice(0, 6).map((order) => (
+                <tr key={order.id} className="hover:bg-slate-800/40 transition">
+                  <td className="p-3 font-mono font-black text-amber-400">
+                    #{order.order_code || order.id}
+                  </td>
+                  <td className="p-3">
+                    <div className="font-bold text-white">{order.customer_name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">{order.customer_phone}</div>
+                  </td>
+                  <td className="p-3 font-black text-amber-300">
+                    {formatVND(order.total_amount)}
+                  </td>
+                  <td className="p-3">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 font-bold">
+                      {order.payment_method}
                     </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-                  {/* Status buttons */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {ord.status === 'pending' && (
-                      <button
-                        onClick={() => handleQuickStatus(ord.id, 'confirmed')}
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 text-[11px] font-bold transition border border-emerald-500/30"
-                      >
-                        ✅ Duyệt
-                      </button>
-                    )}
-                    {ord.status === 'confirmed' && (
-                      <button
-                        onClick={() => handleQuickStatus(ord.id, 'preparing')}
-                        className="px-2.5 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/30 text-orange-400 text-[11px] font-black transition border border-orange-500/30"
-                      >
-                        🍳 Nấu
-                      </button>
-                    )}
-                    {ord.status === 'preparing' && (
-                      <button
-                        onClick={() => handleQuickStatus(ord.id, 'delivering')}
-                        className="px-2.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/30 text-sky-400 text-[11px] font-black transition border border-sky-500/30"
-                      >
-                        🛵 Giao
-                      </button>
-                    )}
-                    {ord.status === 'delivering' && (
-                      <button
-                        onClick={() => handleQuickStatus(ord.id, 'completed')}
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 text-[11px] font-black transition border border-emerald-500/30"
-                      >
-                        ✅ Xong
-                      </button>
-                    )}
-                    {ord.status === 'completed' && (
-                      <span className="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 text-[11px] font-black border border-emerald-500/30">
-                        ✅ Hoàn Thành
-                      </span>
-                    )}
-                    {ord.status === 'cancelled' && (
-                      <span className="px-2.5 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 text-[11px] font-black border border-rose-500/30">
-                        ❌ Đã Hủy
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Print Bill Button */}
-                  <button
-                    onClick={() => setPrintingOrder(ord)}
-                    className="p-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 transition border border-orange-500/30"
-                    title="In phiếu giao hàng & bếp"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
+                        order.status === 'completed'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : order.status === 'delivering'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          : order.status === 'preparing'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          : order.status === 'cancelled'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      }`}
+                    >
+                      {order.status === 'completed'
+                        ? 'Hoàn thành'
+                        : order.status === 'delivering'
+                        ? 'Đang giao'
+                        : order.status === 'preparing'
+                        ? 'Đang nấu'
+                        : order.status === 'cancelled'
+                        ? 'Đã hủy'
+                        : 'Mới tiếp nhận'}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <button
+                      onClick={() => setPrintingOrder(order)}
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition"
+                      title="In hóa đơn bếp POS"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* THERMAL PRINT BILL MODAL */}
-      <PrintBillModal
-        order={printingOrder}
-        onClose={() => setPrintingOrder(null)}
-      />
+      {/* Print Bill Modal */}
+      {printingOrder && (
+        <PrintBillModal
+          order={printingOrder}
+          onClose={() => setPrintingOrder(null)}
+        />
+      )}
     </div>
   );
 }

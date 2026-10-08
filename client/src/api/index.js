@@ -377,3 +377,11 @@ export const spinLuckyWheel = (phoneOrData = {}) =>
         : phoneOrData || {}
     )
   });
+
+// --- Chatbot API ---
+export const sendChatbotMessage = (message, history = []) =>
+  request('/chatbot/message', {
+    method: 'POST',
+    body: JSON.stringify({ message, history })
+  });
+

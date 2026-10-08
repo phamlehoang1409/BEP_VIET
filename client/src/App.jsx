@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from 'react-router-dom';
-import { Gift, Bot, Sparkles } from 'lucide-react';
+import { Gift, Bot, Sparkles, Coins } from 'lucide-react';
 
 // Providers
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -8,6 +8,7 @@ import { CartProvider, useCart } from './context/CartContext';
 import { ChatProvider } from './context/ChatContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { LoyaltyProvider, useLoyalty } from './context/LoyaltyContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import { ToastProvider, useToast } from './components/Toast';
 import { awardSpinForCompletedOrder } from './utils/luckyWheelService';
 
@@ -18,6 +19,7 @@ import CartDrawer from './components/CartDrawer';
 import LiveChatWidget from './components/LiveChatWidget';
 import LoginModal from './components/LoginModal';
 import LuckyWheelModal from './components/LuckyWheelModal';
+import LoyaltyModal from './components/LoyaltyModal';
 import AIFoodAssistantModal from './components/AIFoodAssistantModal';
 import Footer from './components/Footer';
 
@@ -67,11 +69,11 @@ class ErrorBoundary extends React.Component {
             <button
               onClick={() => {
                 if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistrations().then(regs => {
+                  navigator.serviceWorker.getRegistrations().then((regs) => {
                     for (const r of regs) r.unregister();
                   });
                 }
-                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+                caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))));
                 window.location.reload();
               }}
               className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-extrabold text-sm shadow-lg shadow-orange-500/30 active:scale-95 transition"
@@ -88,16 +90,16 @@ class ErrorBoundary extends React.Component {
 
 // Customer Layout Shell
 function CustomerLayout() {
-  const { storeSettings } = useCart();
   const { user } = useAuth();
   const { showToast } = useToast();
   const [isWheelOpen, setIsWheelOpen] = useState(false);
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [availableFoods, setAvailableFoods] = useState([]);
 
   useEffect(() => {
     getFoods({ available_only: true })
-      .then(res => {
+      .then((res) => {
         if (res.success && res.foods) setAvailableFoods(res.foods);
       })
       .catch(() => {});
@@ -118,7 +120,11 @@ function CustomerLayout() {
         if (updatedOrder.status === 'completed') {
           const awarded = awardSpinForCompletedOrder(updatedOrder);
           if (awarded) {
-            showToast(`🎁 Đơn hàng #${updatedOrder.order_code} đã giao hoàn thành! Bạn nhận được +1 lượt quay Vòng Quay May Mắn!`, 'success', 8000);
+            showToast(
+              `🎁 Đơn hàng #${updatedOrder.order_code} đã giao hoàn thành! Bạn nhận được +1 lượt quay Vòng Quay May Mắn!`,
+              'success',
+              8000
+            );
           }
         }
       }
@@ -131,7 +137,10 @@ function CustomerLayout() {
   return (
     <ChatProvider>
       <div className="min-h-screen flex flex-col bg-[#FAF8F5] dark:bg-[#0A0C13] text-slate-900 dark:text-slate-100 transition-colors duration-300">
-        <Navbar onOpenAI={() => setIsAIOpen(true)} />
+        <Navbar
+          onOpenAI={() => setIsAIOpen(true)}
+          onOpenLoyalty={() => setIsLoyaltyOpen(true)}
+        />
         <main className="flex-1">
           <Outlet />
         </main>
@@ -146,7 +155,7 @@ function CustomerLayout() {
           <button
             onClick={() => setIsAIOpen(true)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:from-purple-700 hover:to-amber-600 text-white font-black text-xs shadow-xl shadow-purple-600/35 hover:scale-105 active:scale-95 transition border-2 border-amber-300 group"
-            title="Trợ lý AI tư vấn món ăn theo tâm trạng & ngân sách"
+            title="Trợ lý AI tư vấn món ăn theo tâm trạng & calo"
           >
             <Bot className="w-4 h-4 text-amber-200 group-hover:rotate-12 transition" />
             <span className="hidden sm:inline">AI Tư Vấn Món</span>
@@ -170,6 +179,11 @@ function CustomerLayout() {
           onClose={() => setIsWheelOpen(false)}
         />
 
+        <LoyaltyModal
+          isOpen={isLoyaltyOpen}
+          onClose={() => setIsLoyaltyOpen(false)}
+        />
+
         <AIFoodAssistantModal
           isOpen={isAIOpen}
           onClose={() => setIsAIOpen(false)}
@@ -188,63 +202,65 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <LoyaltyProvider>
-            <CartProvider>
-              <ToastProvider>
-                <div
-                  onContextMenu={(e) => {
-                    try {
-                      const isAdmin = Boolean(
-                        localStorage.getItem('bepviet_admin_token') ||
-                        localStorage.getItem('bepviet_is_admin') === 'true' ||
-                        window.location.search.includes('dev=1') ||
-                        window.location.pathname.startsWith('/admin') ||
-                        window.location.pathname.includes('chu-quan')
-                      );
-                      if (isAdmin) return true;
-                    } catch (err) {}
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                  }}
-                  className="min-h-screen bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
-                >
-                  <BrowserRouter>
-                    <Routes>
-                      {/* Customer Storefront Routes */}
-                      <Route element={<CustomerLayout />}>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/menu" element={<Menu />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/order-success/:id" element={<OrderSuccess />} />
-                        <Route path="/orders" element={<MyOrders />} />
-                      </Route>
+          <FavoritesProvider>
+            <LoyaltyProvider>
+              <CartProvider>
+                <ToastProvider>
+                  <div
+                    onContextMenu={(e) => {
+                      try {
+                        const isAdmin = Boolean(
+                          localStorage.getItem('bepviet_admin_token') ||
+                            localStorage.getItem('bepviet_is_admin') === 'true' ||
+                            window.location.search.includes('dev=1') ||
+                            window.location.pathname.startsWith('/admin') ||
+                            window.location.pathname.includes('chu-quan')
+                        );
+                        if (isAdmin) return true;
+                      } catch (err) {}
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                    }}
+                    className="min-h-screen bg-[#FAF8F5] dark:bg-[#0A0C13] transition-colors duration-300"
+                  >
+                    <BrowserRouter>
+                      <Routes>
+                        {/* Customer Storefront Routes */}
+                        <Route element={<CustomerLayout />}>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/menu" element={<Menu />} />
+                          <Route path="/checkout" element={<Checkout />} />
+                          <Route path="/order-success/:id" element={<OrderSuccess />} />
+                          <Route path="/orders" element={<MyOrders />} />
+                        </Route>
 
-                      {/* Block /admin/login */}
-                      <Route path="/admin/login" element={<Navigate to="/" replace />} />
+                        {/* Block /admin/login */}
+                        <Route path="/admin/login" element={<Navigate to="/" replace />} />
 
-                      {/* Secret Merchant Admin Portals */}
-                      <Route path="/chu-quan-1409" element={<AdminLogin />} />
-                      <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
+                        {/* Secret Merchant Admin Portals */}
+                        <Route path="/chu-quan-1409" element={<AdminLogin />} />
+                        <Route path="/bepviet-secret-1409" element={<AdminLogin />} />
 
-                      {/* Merchant Admin Routes */}
-                      <Route path="/admin" element={<AdminLayout />}>
-                        <Route index element={<Dashboard />} />
-                        <Route path="foods" element={<FoodManagement />} />
-                        <Route path="orders" element={<OrderManagement />} />
-                        <Route path="coupons" element={<CouponManagement />} />
-                        <Route path="reviews" element={<ReviewManagement />} />
-                        <Route path="chat" element={<AdminChat />} />
-                      </Route>
+                        {/* Merchant Admin Routes */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                          <Route index element={<Dashboard />} />
+                          <Route path="foods" element={<FoodManagement />} />
+                          <Route path="orders" element={<OrderManagement />} />
+                          <Route path="coupons" element={<CouponManagement />} />
+                          <Route path="reviews" element={<ReviewManagement />} />
+                          <Route path="chat" element={<AdminChat />} />
+                        </Route>
 
-                      {/* Fallback */}
-                      <Route path="*" element={<Home />} />
-                    </Routes>
-                  </BrowserRouter>
-                </div>
-              </ToastProvider>
-            </CartProvider>
-          </LoyaltyProvider>
+                        {/* Fallback */}
+                        <Route path="*" element={<Home />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </div>
+                </ToastProvider>
+              </CartProvider>
+            </LoyaltyProvider>
+          </FavoritesProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
