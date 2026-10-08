@@ -32,6 +32,7 @@ import StoreSettingsModal from '../../components/StoreSettingsModal';
 import RejectOrderModal from '../../components/RejectOrderModal';
 import PrintBillModal from '../../components/PrintBillModal';
 import { startOrderAlarm, stopOrderAlarm, playNewOrderChime } from '../../utils/orderAlertSound';
+import { notificationService } from '../../utils/notificationService';
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -44,6 +45,9 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [desktopNotifStatus, setDesktopNotifStatus] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied'
+  );
 
   // Store Reception Status (Open vs Paused)
   const [isOpenStore, setIsOpenStore] = useState(true);
@@ -95,6 +99,7 @@ export default function AdminLayout() {
               if (soundEnabled) {
                 startOrderAlarm(newest.order_code);
               }
+              notificationService.notifyNewOrderAdmin(newest);
             }
           }
         }
@@ -114,6 +119,7 @@ export default function AdminLayout() {
       if (soundEnabled) {
         startOrderAlarm(newOrder.order_code);
       }
+      notificationService.notifyNewOrderAdmin(newOrder);
     };
 
     const handleNewMessage = (msg) => {
@@ -130,6 +136,7 @@ export default function AdminLayout() {
     return () => {
       clearInterval(pollInterval);
       stopOrderAlarm();
+      notificationService.stopFlashingTitle();
       if (socket) {
         socket.off('new_order', handleNewOrder);
         socket.off('new_message', handleNewMessage);
@@ -189,6 +196,7 @@ export default function AdminLayout() {
       await confirmOrder(alertOrder.id);
       showToast(`🎉 Đã xác nhận đơn #${alertOrder.order_code} thành công!`, 'success');
       stopOrderAlarm();
+      notificationService.stopFlashingTitle();
       setAlertOrder(null);
       setPendingOrdersCount((c) => Math.max(0, c - 1));
       navigate('/admin/orders');
@@ -202,6 +210,7 @@ export default function AdminLayout() {
   const handleOpenRejectAlert = () => {
     if (!alertOrder) return;
     stopOrderAlarm();
+    notificationService.stopFlashingTitle();
     setRejectModalOrder(alertOrder);
   };
 
@@ -214,6 +223,7 @@ export default function AdminLayout() {
         setRejectModalOrder(null);
         setAlertOrder(null);
         stopOrderAlarm();
+        notificationService.stopFlashingTitle();
         setPendingOrdersCount((c) => Math.max(0, c - 1));
       }
     } catch (err) {
@@ -225,7 +235,25 @@ export default function AdminLayout() {
 
   const handleDismissAlert = () => {
     stopOrderAlarm();
+    notificationService.stopFlashingTitle();
     setAlertOrder(null);
+  };
+
+  const handleRequestDesktopNotif = async () => {
+    const granted = await notificationService.requestPermission();
+    setDesktopNotifStatus(granted ? 'granted' : 'denied');
+    if (granted) {
+      showToast('🔔 Đã bật thông báo Desktop Windows thành công!', 'success');
+      notificationService.notifyNewOrderAdmin({
+        order_code: 'TEST-1409',
+        customer_name: 'Khách Thử Nghiệm',
+        customer_phone: '0353859726',
+        total_amount: 150000,
+        delivery_address: '123 Phố Cổ, Hà Nội'
+      });
+    } else {
+      showToast('Chưa cấp quyền thông báo. Vui lòng cho phép trên trình duyệt để nhận thông báo.', 'error');
+    }
   };
 
   const navLinks = [
@@ -349,6 +377,33 @@ export default function AdminLayout() {
               </span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${soundEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
                 {soundEnabled ? 'BẬT' : 'TẮT'}
+              </span>
+            </button>
+          </div>
+
+          {/* Desktop Windows Notification Toggle */}
+          <div className="px-2">
+            <button
+              onClick={handleRequestDesktopNotif}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition ${
+                desktopNotifStatus === 'granted'
+                  ? 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-300'
+                  : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-400/50 text-amber-300 animate-pulse'
+              }`}
+              title="Bật thông báo Desktop Windows khi có đơn mới"
+            >
+              <span className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-purple-400" />
+                <span>Báo Desktop:</span>
+              </span>
+              <span
+                className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                  desktopNotifStatus === 'granted'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-amber-500 text-slate-950'
+                }`}
+              >
+                {desktopNotifStatus === 'granted' ? 'ĐÃ BẬT' : 'BẬT NGAY'}
               </span>
             </button>
           </div>

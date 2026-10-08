@@ -1,9 +1,11 @@
-// Web Notification Service for Order Delivery Updates
+// Web Notification Service for Order Delivery Updates & Admin Desktop Alerts
+import { formatVND } from './vietnamData';
 
 class NotificationService {
   constructor() {
-    this.isSupported = 'Notification' in window;
-    this.audioContext = null;
+    this.isSupported = typeof window !== 'undefined' && 'Notification' in window;
+    this.titleInterval = null;
+    this.originalTitle = typeof document !== 'undefined' ? document.title : 'Bếp Việt Gourmet';
   }
 
   getPermission() {
@@ -24,7 +26,9 @@ class NotificationService {
 
   playChime() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
@@ -43,12 +47,74 @@ class NotificationService {
     } catch (e) {}
   }
 
+  // Flashing Browser Tab Title when new order arrives
+  startFlashingTitle(alertText = '🚨 CÓ ĐƠN HÀNG MỚI!') {
+    this.stopFlashingTitle();
+    this.originalTitle = document.title;
+    let isAlert = true;
+
+    this.titleInterval = setInterval(() => {
+      document.title = isAlert ? alertText : this.originalTitle;
+      isAlert = !isAlert;
+    }, 1000);
+  }
+
+  stopFlashingTitle() {
+    if (this.titleInterval) {
+      clearInterval(this.titleInterval);
+      this.titleInterval = null;
+      if (typeof document !== 'undefined') {
+        document.title = this.originalTitle || 'Bếp Việt Gourmet';
+      }
+    }
+  }
+
+  // Native Windows / Chrome Desktop Notification for Merchant Admin
+  notifyNewOrderAdmin(order) {
+    if (!this.isSupported) return;
+
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const orderCode = order.order_code || order.id || 'MỚI';
+    const title = `🚨 CÓ ĐƠN HÀNG MỚI! #${orderCode}`;
+    const itemsText = (order.items || [])
+      .map((i) => `${i.quantity}x ${i.food_name || i.name}`)
+      .join(', ');
+    const body = `👤 ${order.customer_name || 'Khách Hàng'} (${order.customer_phone || ''})\n💰 Tổng tiền: ${formatVND(order.total_amount || 0)}\n🍜 Món: ${itemsText || 'Xem chi tiết'}\n📍 Đ/c: ${order.delivery_address || 'Hà Nội'}`;
+
+    this.playChime();
+    this.startFlashingTitle(`🔴 (1) ĐƠN MỚI #${orderCode}!`);
+
+    if (Notification.permission === 'granted') {
+      try {
+        const notif = new Notification(title, {
+          body,
+          icon: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=200&q=80',
+          badge: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=96&q=80',
+          requireInteraction: true, // Keeps notification active on Desktop until clicked
+          tag: `admin-order-${orderCode}`,
+          renotify: true
+        });
+
+        notif.onclick = () => {
+          window.focus();
+          this.stopFlashingTitle();
+          notif.close();
+        };
+      } catch (e) {
+        console.warn('Native desktop notification error:', e);
+      }
+    }
+  }
+
+  // Customer Delivery Updates
   notifyOrderStatus(orderCode, status, customerName = 'Bạn') {
     if (!this.isSupported || Notification.permission !== 'granted') return;
 
     let title = '🍜 Bếp Việt Gourmet';
     let body = '';
-    let icon = '/manifest.json';
 
     switch (status) {
       case 'preparing':
@@ -74,25 +140,20 @@ class NotificationService {
     this.playChime();
 
     try {
-      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification(title, {
-            body,
-            icon: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=200&q=80',
-            badge: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=96&q=80',
-            vibrate: [200, 100, 200],
-            tag: `order-${orderCode}`,
-            renotify: true
-          });
-        });
-      } else {
-        new Notification(title, {
-          body,
-          icon: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=200&q=80'
-        });
-      }
+      const notif = new Notification(title, {
+        body,
+        icon: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=200&q=80',
+        badge: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=96&q=80',
+        tag: `order-${orderCode}`,
+        renotify: true
+      });
+
+      notif.onclick = () => {
+        window.focus();
+        notif.close();
+      };
     } catch (e) {
-      console.warn('Native notification failed:', e);
+      console.warn('Customer notification error:', e);
     }
   }
 }
